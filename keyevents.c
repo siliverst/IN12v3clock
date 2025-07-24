@@ -110,9 +110,9 @@ void event_single_key1(void)
 {
 	switch(i.display_state){
 		case SETUP_NO:
-				if (!i.antipoisoningEn) {
-					iface_start_antipoisoning();
-				}
+				//if (!nixie_antipoison_is_active(&ap)) {
+				apStart();
+				//}
 			break;
 		case SETUP_HOURS:
 			iface_flag05sReset();
@@ -171,13 +171,17 @@ void event_single_key1(void)
 
 		case SETUP_BRIGHT:
 		case SETUP_NIGHT_BR:
-			if(i.setupValue) {
-				i.setupValue--;
-				if (i.setupValue < 5){
-					i.setupValue = 100;
-				}
+			i.setupValue--;
+			if (i.setupValue > 100){
+				i.setupValue = 100;
 			}
-			displaySetBright(i.setupValue);
+			if (i.setupValue < 5){
+				i.setupValue = 0;
+			}
+			
+			if (i.setupValue > 4){
+				displaySetBright(i.setupValue);
+			}
 			break;
 		
 		case SETUP_NIGHT_BR_START_H:

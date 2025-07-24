@@ -31,7 +31,7 @@ void EEPROM_dataInit(void)
 	}
 	
 	e.nBright = EEPROM_readByte(NIGHT_BR_ADDR);
-	if ((e.nBright > 100)||(e.nBright < 5)) {
+	if (e.nBright > 100) {
 		e.nBright = 100;
 		EEPROM_writeByte(NIGHT_BR_ADDR,e.nBright);
 	}

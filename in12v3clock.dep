@@ -32,7 +32,7 @@ ExternDep= eeprom.c  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\m
 ExternDep= iface.c  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\mods0.h"  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\stdint.h" iface.h  keyevents.h service_timing.h ds3231.h display.h macro.h eeprom.h  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\string.h"
 
 [Root.Source Files.iface.c.Config.1]
-ExternDep= iface.c  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\mods0.h"  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\stdint.h" iface.h  keyevents.h service_timing.h ds3231.h display.h  stm8_headers\include\STM8S003F3.h macro.h eeprom.h  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\string.h"
+ExternDep= iface.c  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\mods0.h"  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\stdint.h" iface.h  display.h stm8_headers\include\STM8S003F3.h keyevents.h service_timing.h  ds3231.h macro.h eeprom.h  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\string.h"
 
 [Root.Source Files.display.c.Config.0]
 ExternDep= display.c  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\mods0.h"  stm8_headers\include\STM8S003F3.h  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\stdint.h" hc595.h  display.h rgb.h macro.h eeprom.h  "C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8\Hstm8\string.h"

@@ -13,8 +13,19 @@
  DOWN BUTTON - on/off RBG backlight
  
  todo comments on english
- todo 12/24
+ todo remove 12/24
+ todo remove leading zero off.
+ todo i2c delay func to save ROM space
  todo if there is enough ROM - gamma compensation for RGB.
+ todo refactor the antipoison algorithm.
+ todo simplify the backligt on/off
+ todo add backlight bright for night and for normal mode
+ todo add disable for the bright for the night mode.
+ todo independed antipoisonig intervals for day and for night. 
+			Maybe if night bright is off - day interval automatically set to 3 min.
+ todo replace nBrightEn with if (nBright < 100)
+ todo make a beautiful animation of the transition from night to day interval and vice versa. 
+      Now is not beautiful with antipoisonin.
 */
 
 int main(void) {

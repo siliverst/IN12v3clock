@@ -11,6 +11,7 @@ static volatile uint8_t disp_data[5]							= {0,0,0,0,0};
 static 					uint8_t dotPulseCounter;
 			 volatile uint8_t flag10ms;
 static 					uint16_t displayBright;
+static volatile uint8_t	bright0;
 
 static uint8_t *displayNixieBuffPrepare(uint8_t *inbuff, uint8_t dmask);
 static void displaySetDotBright( uint8_t bright);
@@ -217,6 +218,7 @@ static uint8_t *displayNixieBuffPrepare(uint8_t *inbuff, uint8_t dmask)
 */
 void displaySetBright(uint8_t bright)
 {
+	bright0 = bright;
 	if (bright == 0){
 		memset(disp_data,0,sizeof(disp_data));
 	}else{
@@ -234,7 +236,11 @@ uint8_t data[4] -> {minutes,tens of minutes,hours,tens of hours}
 */
 void displayNixie(uint8_t *data, uint8_t full_bright_bitmask)
 {
-	memcpy(disp_data,displayNixieBuffPrepare(data,bin(00001111)),sizeof(disp_data));
+	if (bright0){
+		memcpy(disp_data,displayNixieBuffPrepare(data,bin(00001111)),sizeof(disp_data));
+	}else{
+		memcpy(disp_data,displayNixieBuffPrepare(data,full_bright_bitmask),sizeof(disp_data));
+	}
 	memcpy(zero_data,displayNixieBuffPrepare(data,full_bright_bitmask),sizeof(zero_data));
 }
 
@@ -316,13 +322,13 @@ ISR_HANDLER (TIM2_UPD_ISR, _TIM2_OVR_UIF_VECTOR_)
 
 ISR_HANDLER (TIM2_CAP_ISR, _TIM2_CAPCOM_CC1IF_VECTOR_)
 {
-	//для цифр
+	//for digits
 	if(sfr_TIM2.SR1.CC1IF){
 		hc595ChainShiftOut(zero_data,sizeof(zero_data));
 		sfr_TIM2.SR1.CC1IF = 0;
 	}
 	
-	//для точки
+	//for dot
 	if(sfr_TIM2.SR1.CC2IF)
 	{
 		DOT_PIN = 0;

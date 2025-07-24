@@ -36,11 +36,11 @@ void hc595Init (void)
 	
 }
 /*
-здесь нужно посмотреть на быстродействие этой фунции в прерывании,
-и если нужно, то можно для ускорения передачи данных сделать 5 * 8 бит ( т.е по байту)
-но потеряем в размере функции которая будет перекодировать 10 бит в 16-битном числе в конкретные биты в этом массиве.
-Т.е. изначально будет массив 4 элемента на 10 бит ( 16 битное число) для отображение каждой лампы
-которое будет мапится на массив 5 элемент на 8 бит ( 8 битное число) функция довольно объёмная. 
+here you need to look at the performance of this function in the interrupt,
+and if necessary, you can make 5 * 8 bits (i.e. per byte) to speed up data transfer
+but we will lose in the size of the function that will recode 10 bits in a 16-bit number into specific bits in this array.
+i.e. initially there will be an array of 4 elements by 10 bits (16-bit number) to display each lamp
+which will be mapped to an array of 5 elements by 8 bits (8-bit number) the function is quite voluminous.
 */
 /*
 void hc595ChainShiftOut (uint16_t *data, uint8_t length) 

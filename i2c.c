@@ -30,7 +30,7 @@ uint8_t i2c_busy_check ( void )
 	}
 }
 
-// если шина занята, то 99%  слэйв залип в ACK, эта функция призвана это устранить.
+// if the bus is busy, then 99% of the slave is stuck in ACK, this function is designed to eliminate this.
 void i2c_slave_unlock ( void )
 {
 	uint8_t a,i;

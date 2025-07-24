@@ -5,6 +5,9 @@
 extern "C" {
 #endif
 
+#include "display.h"
+#define AP_CYCLES	2
+
 enum setup_states{
 	SETUP_ZERO,
 	SETUP_F1224,
@@ -29,7 +32,7 @@ enum setup_states{
 typedef struct  
 {
 	uint16_t 	timeSetupCounter;
-	uint8_t		display[4];
+	uint8_t		display[NIXIE_COUNT];
 	uint8_t		flag10ms;
 	uint8_t		display_state;
 	uint8_t		seconds;
@@ -41,16 +44,19 @@ typedef struct
 	uint8_t 	counter1s;
 	uint8_t		flag05s;
 	uint8_t		flag100ms;
-	uint8_t		minutesOld;
-	uint8_t		hoursOld;
-	uint8_t		apOld[4];
-	uint8_t		apNew[4];
-	uint8_t		apFlagEn[4];
-	uint8_t		counterAp100ms;
-	uint8_t 	antipoisoningEn;
-	uint8_t 	antipoisoningOldDigit;
-	uint8_t 	antipoisoningCurrentDigit;
 }Iface;
+
+typedef struct
+{
+	uint8_t digsOld[NIXIE_COUNT];
+	uint8_t digsNew[NIXIE_COUNT];
+	uint8_t digsCurrent[NIXIE_COUNT];
+	uint8_t digsCounter[NIXIE_COUNT];
+	uint8_t flagEn[NIXIE_COUNT];
+	uint8_t	en;
+	uint8_t counter;
+	uint8_t procCounter;
+}antipoisoning;
 
 
 void iface_init( void );
@@ -61,7 +67,7 @@ uint8_t bcd_to_decimal(uint8_t bcd);
 uint8_t decimal_to_bcd(uint8_t decimal);
 uint16_t time_to_minutes(uint8_t hour, uint8_t minute);
 uint8_t is_time_in_interval(uint16_t current_minutes, uint16_t start_minutes, uint16_t end_minutes);
-void iface_start_antipoisoning(void);
+void apStart (void);
 void RGBtoggle ( void );
 
 #ifdef	__cplusplus
