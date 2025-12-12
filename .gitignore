@@ -6,5 +6,4 @@
 /SDCC/*
 !/SDCC/*.s19
 !/SDCC/*.ihx
-!/SDCC/*.hex
 /.idea

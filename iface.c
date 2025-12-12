@@ -23,6 +23,7 @@ static void apProc (void);
 static void apUpdateTime (void);
 static uint8_t apInWork (void);
 
+static uint8_t dot_dis;	//dirty hack
 
 void iface_init( void )
 {
@@ -32,6 +33,7 @@ void iface_init( void )
 	apUpdateTime();	// two calls toupdate the digsNew array;
 	apUpdateTime();
 	//displayRGBset(0);
+	dot_dis = 0;
 }
 
 void iface_proc ( void ) 
@@ -127,7 +129,11 @@ static void timer50msProc(void)
 		ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
 		if (i.seconds != secondsLast){
 			secondsLast = i.seconds;
-			displayDotPulse();
+			if (dot_dis){
+				displayDot(0);
+			}else{
+				displayDotPulse();
+			}
 		}
 	}
 }
@@ -267,7 +273,9 @@ static void iface_display(void)
 							displaySetBright(e.nBright);
 							if (e.nBright == 0){
 								displayRGBset(0);
+								dot_dis = 1;
 							} else {
+								dot_dis = 0;
 								if (e.rgbGlobalEn){
 									if (e.rgbAtNightEn){
 										displayRGBset(1);
@@ -278,12 +286,14 @@ static void iface_display(void)
 							}
 						} else {
 							displaySetBright(e.bright);
+							dot_dis = 0;
 							if (e.rgbGlobalEn){
 								displayRGBset(1);
 							}
 						}
 					} else {
 						displaySetBright(e.bright);
+						dot_dis = 0;
 						if (e.rgbGlobalEn){
 							displayRGBset(1);
 						}

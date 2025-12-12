@@ -12,9 +12,14 @@
  UP BUTTON   - change effects
  DOWN BUTTON - on/off RBG backlight
  
+ 
+ todo a function that monitors all intervals; each interval is checked once in the main loop.
+			After an interval is checked, the corresponding global flag is set, which is then checked in the interface.
+ todo separate brightness for RGB and Clock + dot, all with the ability to disable brightness. All with their own intervals?
+ todo add other dot blinking stiles (0.5s, 1s, pwm and on|off).
  todo comments on english
- todo remove 12/24
- todo remove leading zero off.
+ todo add 12/24
+ todo add leading zero off.
  todo i2c delay func to save ROM space
  todo if there is enough ROM - gamma compensation for RGB.
  todo refactor the antipoison algorithm.
