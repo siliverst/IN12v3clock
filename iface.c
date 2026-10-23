@@ -25,6 +25,7 @@ static void apUpdateTime (void);
 static uint8_t apInWork (void);
 
 static uint16_t nowMinutes;		// current time, minutes from midnight
+static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtoggle()
 
 void iface_init( void )
 {
@@ -235,6 +236,7 @@ void iface_apply_mode (void)
 {
 	uint16_t start_minutes;
 	uint16_t end_minutes;
+	uint8_t rgb;
 	
 	nowMinutes		= time_to_minutes(bcd_to_decimal(i.hours), bcd_to_decimal(i.minutes));
 	start_minutes	= time_to_minutes(e.nightStartH, e.nightStartM);
@@ -243,10 +245,13 @@ void iface_apply_mode (void)
 	
 	if (i.night){
 		displaySetBright(e.nBright);
-		RGBset(e.rgbNightEn ? e.rgbNightBright : 0);
+		rgb = e.rgbNightEn ? e.rgbNightBright : 0;
 	}else{
 		displaySetBright(e.bright);
-		RGBset(e.rgbDayEn ? e.rgbBright : 0);
+		rgb = e.rgbDayEn ? e.rgbBright : 0;
+	}
+	if (!rgbBlink){
+		RGBset(rgb);
 	}
 }
 
@@ -268,6 +273,7 @@ Settings are reloaded from EEPROM to drop not saved changes (the color in RGB se
 void iface_exit_setup (void)
 {
 	i.display_state = SETUP_NO;
+	rgbBlink = 0;
 	EEPROM_dataInit();
 	iface_apply_mode();
 }
@@ -282,13 +288,19 @@ static void iface_display(void)
 	
 	switch(s){
 		case SETUP_NO:
+			if (rgbBlink){
+				--rgbBlink;
+				RGBset((rgbBlink % 6) >= 3 ? 50 : 0);			// 0.3s on, 0.3s off
+			}
+			
 			if (i.seconds != secondsLast){
 				secondsLast = i.seconds;
 				iface_apply_mode();
 				
 				if (minutesLast != i.minutes){
 					if (minutesLast != 0xff){		// not at start
-						interval = i.night ? e.apNight : e.apDay;
+						// at night with digits off antipoisoning is not done, it disturbs people
+						interval = i.night ? (e.nBright ? e.apNight : 0) : e.apDay;
 						if (interval && (nowMinutes % interval == 0)){
 							apStart();
 						}
@@ -401,12 +413,18 @@ uint8_t is_time_in_interval(uint16_t current_minutes, uint16_t start_minutes, ui
 }
 
 /*
-K2: switch the backlight on/off for the current interval (day or night)
+K2: switch the backlight on/off for the current interval (day or night).
+If the backlight brightness of the interval is 0, blink 3 times at 50% to show
+that it is switched off by the settings, the on/off state is not changed.
 */
 void RGBtoggle ( void )
 {
 	uint8_t a = i.night ? RGB_NIGHT_EN_ADDR : RGB_DAY_EN_ADDR;
 	
+	if (!(i.night ? e.rgbNightBright : e.rgbBright)){
+		rgbBlink = 3*6;
+		return;
+	}
 	EEPROM_set(a, !EE(a));
 	iface_apply_mode();
 }

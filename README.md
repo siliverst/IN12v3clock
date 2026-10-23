@@ -184,7 +184,8 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ## **Basic Control:**
 1. **Single press of K1** — Executes the cathode poisoning prevention algorithm.
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
-   Day and night have their own on/off state and brightness (menu items 4 and 5).
+   Day and night have their own on/off state and brightness (menu items 4 and 5).  
+   If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
 3. **Hold K1 (> 2 seconds)** — Activates time setup mode.
 4. **Hold K2 (> 2 seconds)** — Activates backlight color adjustment mode.
 5. **Hold K1 and K2 simultaneously (> 2 seconds)** — Activates the settings menu.
@@ -256,9 +257,9 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 
     **10.** **Night interval end minute.**  
 
-    **11.** **Cathode poisoning prevention interval, day:** `0` — Off, `1–60` minutes  
+    **11.** **Cathode poisoning prevention interval, day:** `0` — Off, `1–30` minutes  
 
-    **12.** **Cathode poisoning prevention interval, night:** `0` — Off, `1–60` minutes  
+    **12.** **Cathode poisoning prevention interval, night:** `0` — Off, `1–30` minutes (not done if the night digits brightness is 0)  
 
     **13.** **Colon type:**  
          `0` — Pulse every second  

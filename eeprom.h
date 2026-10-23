@@ -32,7 +32,7 @@ enum eeprom_adreses{
 
 #define EE_MAGIC_ADDR			EE_COUNT
 #define EE_MAGIC					0x5A		// change it when the layout is changed
-#define AP_INTERVAL_MAX		60			// minutes
+#define AP_INTERVAL_MAX		30			// minutes
 #define BRIGHT_MIN				5				// %, minimal digits brightness (except 0 at night)
 
 typedef struct {
