@@ -149,6 +149,12 @@ Q7 -> 2003A U14 I5, O5-> N1 9
  - Run command `make clean` in the terminal window.
  - Run command `make` in the terminal window.
  - Or use the precompiled files (`main.s19` or `main.ihx`) located in the `SDCC` directory.
+
+ **Command line build (no STVD, no Docker):**
+ - Requires Python 3 and installed Cosmic CXSTM8 and/or SDCC (default install paths, or set `COSMIC_DIR` / `SDCC_DIR`).
+ - `python tools/build.py` builds with both compilers, `python tools/build.py cosmic` or `... sdcc` builds with one.
+ - Results go to `build/cosmic/in12v3clock.s19` and `build/sdcc/main.s19`; the script prints ROM/RAM usage and fails if the firmware does not fit into 8 KB.
+ - Note: in the STVD Release configuration the Cosmic optimizer is enabled (option `-no` removed), it saves about 540 bytes.
 2. Flash the firmware to the STM8S003F3P6 microcontroller.
 - The `in12v3clock_Programmer` directory contains a project for the STVP programmer with a default EEPROM file and a default OPTION BYTE file.
 
