@@ -5,48 +5,66 @@
 extern "C" {
 #endif
 
+// EEPROM layout. Addresses 0..SETUP_MENU_LAST are also the settings menu items (see iface.h),
+// the order of the fields in Edata must be the same.
 enum eeprom_adreses{
 	ZERO_ADDR,
 	F1224_ADDR,
-	BRIGHT_ADDR,
-	NIGHT_BR_ADDR,
-	NIGHT_BR_EN_ADDR,
-	NIGHT_BR_START_H_ADDR,
-	NIGHT_BR_START_M_ADDR,
-	NIGHT_BR_STOP_H_ADDR,
-	NIGHT_BR_STOP_M_ADDR,
-	NIGHT_RGB_EN_ADDR,
-	ANTIPOISONING_AT_NIGHT_ONLY_ADDR,
+	BRIGHT_ADDR,							// digits brightness, day, 5..100%
+	NIGHT_BR_ADDR,						// digits brightness, night, 0..100%
+	RGB_BR_ADDR,							// backlight brightness, day, 0..100%
+	RGB_NIGHT_BR_ADDR,				// backlight brightness, night, 0..100%
+	NIGHT_EN_ADDR,						// night interval enable
+	NIGHT_START_H_ADDR,
+	NIGHT_START_M_ADDR,
+	NIGHT_END_H_ADDR,
+	NIGHT_END_M_ADDR,
+	AP_DAY_ADDR,							// antipoisoning interval, day, minutes, 0 - off
+	AP_NIGHT_ADDR,						// antipoisoning interval, night, minutes, 0 - off
+	COLON_ADDR,								// colon type: 0 - pulse, 1 - on, 2 - off
+	RGB_DAY_EN_ADDR,					// backlight on/off (K2), day
+	RGB_NIGHT_EN_ADDR,				// backlight on/off (K2), night
 	R_ADDR,
 	G_ADDR,
 	B_ADDR,
-	ANTIPOISONING_EFFECT_ADDR,
-	RGB_EN_ADDR,
-	COLON_BLINKING_TYPE
+	EE_COUNT
 };
 
+#define EE_MAGIC_ADDR			EE_COUNT
+#define EE_MAGIC					0x5A		// change it when the layout is changed
+#define AP_INTERVAL_MAX		60			// minutes
+#define BRIGHT_MIN				5				// %, minimal digits brightness (except 0 at night)
 
 typedef struct {
 	uint8_t		zeroEn;
 	uint8_t		f1224;
 	uint8_t		bright;
 	uint8_t		nBright;
-	uint8_t		nBrightEn;
-	uint8_t		nBrightStartH;
-	uint8_t		nBrightStartM;
-	uint8_t		nBrightEndH;
-	uint8_t		nBrightEndM;
-	uint8_t		rgbAtNightEn;
-	uint8_t		antipoisoningAtNihgtOnly;
-	uint8_t 	rgbGlobalEn;
-	uint8_t		antipoisoningEffect;
+	uint8_t		rgbBright;
+	uint8_t		rgbNightBright;
+	uint8_t		nightEn;
+	uint8_t		nightStartH;
+	uint8_t		nightStartM;
+	uint8_t		nightEndH;
+	uint8_t		nightEndM;
+	uint8_t		apDay;
+	uint8_t		apNight;
 	uint8_t		colonBlinkingType;
+	uint8_t		rgbDayEn;
+	uint8_t		rgbNightEn;
+	uint8_t		r;
+	uint8_t		g;
+	uint8_t		b;
 }Edata;
 
 extern Edata e;
+extern const uint8_t eeMax[EE_COUNT];
 
+// access to the field of e by its EEPROM address
+#define EE(addr)		(((uint8_t *)&e)[addr])
 
 void EEPROM_dataInit(void);
+void EEPROM_set(uint8_t addr, uint8_t data);
 uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data);
 uint8_t EEPROM_readByte(uint16_t logAddr);
 

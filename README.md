@@ -183,8 +183,8 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 
 ## **Basic Control:**
 1. **Single press of K1** — Executes the cathode poisoning prevention algorithm.
-2. **Single press of K2** — Toggles the RGB lamp backlight.  
-   - In night mode, toggles the backlight for night operation.
+2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
+   Day and night have their own on/off state and brightness (menu items 4 and 5).
 3. **Hold K1 (> 2 seconds)** — Activates time setup mode.
 4. **Hold K2 (> 2 seconds)** — Activates backlight color adjustment mode.
 5. **Hold K1 and K2 simultaneously (> 2 seconds)** — Activates the settings menu.
@@ -230,46 +230,43 @@ Q7 -> 2003A U14 I5, O5-> N1 9
    - **K2:** Saves the parameter and moves to the next menu item.
 4. ## Menu Items:  
 
-    **0.** **Leading zero display:**  
-         `0` — Disabled  
-         `1` — Enabled  
+    Items 0–9: the item number is in the left digit, the value in the three right digits.  
+    Items 10–13: the item number is in the two left digits, the value in the two right digits.  
+    Brightness items count down (100 → 0) and show the brightness being set.
 
-    **1.** **Time format:**  
-         `0` — 24-hour  
-         `1` — 12-hour  
+    **0.** **Leading zero display:** `0` — Disabled, `1` — Enabled (not implemented yet)  
 
-    **2.** **Normal mode indicator brightness:**  
-         `5%–100%`  
+    **1.** **Time format:** `0` — 24-hour (12-hour is not implemented yet)  
 
-    **3.** **Night mode indicator brightness:**  
-         `5%–100%`  
+    **2.** **Day digits brightness:** `5%–100%`  
 
-    **4.** **Night brightness enable:**  
-         `0` — Disabled  
-         `1` — Enabled  
+    **3.** **Night digits brightness:** `0%, 5%–100%` (`0` — digits and colon are off at night)  
 
-    **5.** **Night interval start hour.**  
+    **4.** **Day backlight brightness:** `0%–100%`  
 
-    **6.** **Night interval start minute.**  
+    **5.** **Night backlight brightness:** `0%–100%`  
 
-    **7.** **Night interval end hour.**  
+    **6.** **Night interval enable:** `0` — Disabled (day settings all the time), `1` — Enabled  
 
-    **8.** **Night interval end minute.**  
+    **7.** **Night interval start hour.**  
 
-    **9.** **RGB backlight in night mode:**  
-         `0` — Disabled  
-         `1` — Enabled  
+    **8.** **Night interval start minute.**  
 
-    **10.** **Cathode poisoning prevention in night mode:**  
-         `0` — Every 6 minutes during normal operation  
-         `1` — Every 2 minutes (only at night)  
+    **9.** **Night interval end hour.**  
 
-    **11.** **Colon blinking type:**  
-         `0` — Default blinking  
-         `1` — Colon always on  
-         `2` — Colon always off  
+    **10.** **Night interval end minute.**  
+
+    **11.** **Cathode poisoning prevention interval, day:** `0` — Off, `1–60` minutes  
+
+    **12.** **Cathode poisoning prevention interval, night:** `0` — Off, `1–60` minutes  
+
+    **13.** **Colon type:**  
+         `0` — Pulse every second  
+         `1` — Always on (at the digits brightness)  
+         `2` — Always off  
     
-5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.
+5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.  
+   Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.
 
 </details>
 

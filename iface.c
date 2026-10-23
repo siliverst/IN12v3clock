@@ -6,6 +6,7 @@
 #include "display.h"
 #include "macro.h"
 #include "eeprom.h"
+#include "rgb.h"
 #include <string.h>
 
 Iface i;
@@ -23,7 +24,7 @@ static void apProc (void);
 static void apUpdateTime (void);
 static uint8_t apInWork (void);
 
-static uint8_t dot_dis;	//dirty hack
+static uint16_t nowMinutes;		// current time, minutes from midnight
 
 void iface_init( void )
 {
@@ -32,8 +33,7 @@ void iface_init( void )
 	memset(ap.flagEn,0,sizeof(ap.flagEn));
 	apUpdateTime();	// two calls toupdate the digsNew array;
 	apUpdateTime();
-	//displayRGBset(0);
-	dot_dis = 0;
+	iface_apply_mode();
 }
 
 void iface_proc ( void ) 
@@ -129,11 +129,7 @@ static void timer50msProc(void)
 		ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
 		if (i.seconds != secondsLast){
 			secondsLast = i.seconds;
-			if (dot_dis){
-				displayDot(0);
-			}else{
-				displayDotPulse();
-			}
+			displayDotPulse();
 		}
 	}
 }
@@ -232,31 +228,72 @@ static void apUpdateTime (void)
 	iface_disp2bcdDigit(i.hours,		&ap.digsNew[2],&ap.digsNew[3]);
 }
 
+/*
+day or night mode by the current time: digits and backlight brightness
+*/
+void iface_apply_mode (void)
+{
+	uint16_t start_minutes;
+	uint16_t end_minutes;
+	
+	nowMinutes		= time_to_minutes(bcd_to_decimal(i.hours), bcd_to_decimal(i.minutes));
+	start_minutes	= time_to_minutes(e.nightStartH, e.nightStartM);
+	end_minutes		= time_to_minutes(e.nightEndH, e.nightEndM);
+	i.night = e.nightEn && is_time_in_interval(nowMinutes, start_minutes, end_minutes);
+	
+	if (i.night){
+		displaySetBright(e.nBright);
+		RGBset(e.rgbNightEn ? e.rgbNightBright : 0);
+	}else{
+		displaySetBright(e.bright);
+		RGBset(e.rgbDayEn ? e.rgbBright : 0);
+	}
+}
+
+/*
+settings menu: show the brightness which is being set, the backlight is off for other items
+*/
+void iface_menu_preview (void)
+{
+	uint8_t s = i.display_state;
+	
+	displaySetBright((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? i.setupValue : 100);
+	RGBset((s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? i.setupValue : 0);
+}
+
+/*
+back to the time display, by the last key or by timeout.
+Settings are reloaded from EEPROM to drop not saved changes (the color in RGB setup).
+*/
+void iface_exit_setup (void)
+{
+	i.display_state = SETUP_NO;
+	EEPROM_dataInit();
+	iface_apply_mode();
+}
+
 static void iface_display(void)
 {
 	static uint8_t secondsLast = 0xff;
 	static uint8_t minutesLast = 0xff;
+	uint8_t interval;
+	uint8_t s = i.display_state;
+	uint8_t v = i.setupValue;
 	
-	uint16_t current_minutes;
-	uint16_t start_minutes;
-	uint16_t end_minutes;
-	
-	switch(i.display_state){
+	switch(s){
 		case SETUP_NO:
-			current_minutes = time_to_minutes(bcd_to_decimal(i.hours), bcd_to_decimal(i.minutes));
-			start_minutes 	=	time_to_minutes(e.nBrightStartH, e.nBrightStartM);
-			end_minutes 		= time_to_minutes(e.nBrightEndH, e.nBrightEndM);
-			
-			if (minutesLast == 0xff) {
-				minutesLast = i.minutes;
-			}
-			else if (minutesLast != i.minutes){
-				minutesLast = i.minutes;
-				if (!is_time_in_interval(current_minutes, start_minutes, end_minutes)) {
-					if (i.minutes%4 == 0)
-					{
-						apStart();
+			if (i.seconds != secondsLast){
+				secondsLast = i.seconds;
+				iface_apply_mode();
+				
+				if (minutesLast != i.minutes){
+					if (minutesLast != 0xff){		// not at start
+						interval = i.night ? e.apNight : e.apDay;
+						if (interval && (nowMinutes % interval == 0)){
+							apStart();
+						}
 					}
+					minutesLast = i.minutes;
 				}
 			}
 			
@@ -264,135 +301,53 @@ static void iface_display(void)
 				iface_disp2bcdDigit(i.minutes, &i.display[0], &i.display[1]);
 				iface_disp2bcdDigit(i.hours, &i.display[2], &i.display[3]);
 				displayNixie(&i.display[0],0);
-			
-				if (i.seconds != secondsLast){
-					secondsLast = i.seconds;
-					
-					if (e.nBrightEn){
-						if (is_time_in_interval(current_minutes, start_minutes, end_minutes)) {
-							displaySetBright(e.nBright);
-							if (e.nBright == 0){
-								displayRGBset(0);
-								dot_dis = 1;
-							} else {
-								dot_dis = 0;
-								if (e.rgbGlobalEn){
-									if (e.rgbAtNightEn){
-										displayRGBset(1);
-									} else {
-										displayRGBset(0);
-									}
-								}
-							}
-						} else {
-							displaySetBright(e.bright);
-							dot_dis = 0;
-							if (e.rgbGlobalEn){
-								displayRGBset(1);
-							}
-						}
-					} else {
-						displaySetBright(e.bright);
-						dot_dis = 0;
-						if (e.rgbGlobalEn){
-							displayRGBset(1);
-						}
-					}
-				}
 			}
 			break;
 		
 		case SETUP_HOURS:
-			iface_disp2bcdDigit(i.minutesSetupValue, &i.display[0], &i.display[1]);
-			iface_disp2bcdDigit(i.hoursSetupValue, &i.display[2], &i.display[3]);
-			if(i.flag05s){
-				i.display[2] = NIXIE_OFF;
-				i.display[3] = NIXIE_OFF;
-			}
-			displayNixie(&i.display[0],0);
-			displayDot(1);
-			break;
-		
 		case SETUP_MINUTES:
 			iface_disp2bcdDigit(i.minutesSetupValue, &i.display[0], &i.display[1]);
 			iface_disp2bcdDigit(i.hoursSetupValue, &i.display[2], &i.display[3]);
 			if(i.flag05s){
-				i.display[0] = NIXIE_OFF;
-				i.display[1] = NIXIE_OFF;
+				if (s == SETUP_HOURS){
+					i.display[2] = NIXIE_OFF;
+					i.display[3] = NIXIE_OFF;
+				}else{
+					i.display[0] = NIXIE_OFF;
+					i.display[1] = NIXIE_OFF;
+				}
 			}
 			displayNixie(&i.display[0],0);
-			displayDot(1);
+			displayDot(100);
 			break;
 		
 		case SETUP_R:
 		case SETUP_G:
 		case SETUP_B:
-			iface_disp3decDigit (i.setupValue, &i.display[0], &i.display[1], &i.display[2]);
+			iface_disp3decDigit (EE(R_ADDR + s - SETUP_R), &i.display[0], &i.display[1], &i.display[2]);
 			if (i.flag100ms){
 				i.display[3] = NIXIE_OFF;
 			}else{
-				i.display[3] = i.display_state-11;
+				i.display[3] = s - SETUP_R + 1;
 			}
-			displayNixie(&i.display[0],0);
-			displayDot(0);
-			break;
-		
-		case SETUP_BRIGHT:
-		case SETUP_NIGHT_BR:
-			i.display[3] = i.display_state;
-			if (i.setupValue) {
-				iface_disp3decDigit (i.setupValue, &i.display[0], &i.display[1], &i.display[2]);
-			}else{
-				i.display[0] = NIXIE_OFF;
-				i.display[1] = NIXIE_OFF;
-				i.display[2] = NIXIE_OFF;
-			}
-			displayNixie(&i.display[0],bin(00001000));
-			displayDot(0);
-		break;
-		
-		case SETUP_ZERO:
-		case SETUP_F1224:
-		case SETUP_NIGHT_BR_EN:
-		case SETUP_NIGHT_RGB_EN:
-		case SETUP_ANTIPOISONING_AT_NIGHT_ONLY:
-			if (i.display_state > 9){
-				iface_disp2decDigit(i.display_state,&i.display[2],&i.display[3]);
-			}else{
-				i.display[3] = i.display_state;
-				i.display[2] = NIXIE_OFF;	
-			}
-			i.display[1] = NIXIE_OFF;
-			i.display[0] = i.setupValue;
-			displayNixie(&i.display[0],0);
-			displayDot(0);
-			break;
-		
-		case SETUP_COLON_BLINKING_TYPE:
-			if (i.display_state > 10){
-				iface_disp2decDigit(i.display_state,&i.display[2],&i.display[3]);
-			}else{
-				i.display[3] = i.display_state;
-				i.display[2] = NIXIE_OFF;	
-			}
-			i.display[1] = NIXIE_OFF;
-			i.display[0] = i.setupValue;
-			displayNixie(&i.display[0],0);
-			displayDot(0);
-			break;
-		
-		case SETUP_NIGHT_BR_START_H:
-		case SETUP_NIGHT_BR_START_M:
-		case SETUP_NIGHT_BR_END_H:
-		case SETUP_NIGHT_BR_END_M:
-			iface_disp2decDigit(i.setupValue, &i.display[0], &i.display[1]);
-			i.display[2] = NIXIE_OFF;
-			i.display[3] = i.display_state;
 			displayNixie(&i.display[0],0);
 			displayDot(0);
 			break;
 		
 		default:
+			// settings menu: item number in the left digits (at full brightness), value in the right ones
+			if (s > SETUP_MENU_LAST) {break;}
+			i.display[0] = v % 10;
+			i.display[1] = (eeMax[s] > 9) ? (v / 10) % 10 : NIXIE_OFF;
+			i.display[2] = (v > 99) ? v / 100 : NIXIE_OFF;
+			if (s > 9){
+				iface_disp2decDigit(s, &i.display[2], &i.display[3]);
+				displayNixie(&i.display[0],bin(00001100));
+			}else{
+				i.display[3] = s;
+				displayNixie(&i.display[0],bin(00001000));
+			}
+			displayDot(0);
 			break;
 	}
 }
@@ -446,36 +401,12 @@ uint8_t is_time_in_interval(uint16_t current_minutes, uint16_t start_minutes, ui
 }
 
 /*
-switch state of rgb
-if time is in night interval - control nigt rgb enable flag
-if time in in normal interval - control global rgb enable flag
+K2: switch the backlight on/off for the current interval (day or night)
 */
 void RGBtoggle ( void )
 {
-	uint16_t current_minutes;
-	uint16_t start_minutes;
-	uint16_t end_minutes;
+	uint8_t a = i.night ? RGB_NIGHT_EN_ADDR : RGB_DAY_EN_ADDR;
 	
-	current_minutes = time_to_minutes(bcd_to_decimal(i.hours), bcd_to_decimal(i.minutes));
-	start_minutes 	=	time_to_minutes(e.nBrightStartH, e.nBrightStartM);
-	end_minutes 		= time_to_minutes(e.nBrightEndH, e.nBrightEndM);
-		
-	if (is_time_in_interval(current_minutes, start_minutes, end_minutes)&&e.nBrightEn) {
-		if (e.rgbAtNightEn){
-			e.rgbAtNightEn = 0;
-		} else {
-			e.rgbAtNightEn = 1;
-		}
-		displayRGBset(e.rgbAtNightEn);
-		EEPROM_writeByte(NIGHT_RGB_EN_ADDR,e.rgbGlobalEn);
-	} 
-	else {
-		if (e.rgbGlobalEn){
-			e.rgbGlobalEn = 0;
-		} else {
-			e.rgbGlobalEn = 1;
-		}
-		displayRGBset(e.rgbGlobalEn);
-		EEPROM_writeByte(RGB_EN_ADDR,e.rgbGlobalEn);
-	}
+	EEPROM_set(a, !EE(a));
+	iface_apply_mode();
 }

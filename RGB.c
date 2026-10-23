@@ -1,8 +1,10 @@
 #include "STM8S003F3.h"
 #include "rgb.h"
 #include "macro.h"
+#include "eeprom.h"
 
-#define RGB_RELOAD_VALUE		10000
+// color (0..255) * bright (0..100) fits to the period without division, 627Hz PWM
+#define RGB_RELOAD_VALUE		25500
 
 void RGBinit ( void )
 {
@@ -54,20 +56,20 @@ void RGBinit ( void )
 }
 
 
-void RGBsetR ( uint16_t value )
+/*
+bright -> 0..100%, color is taken from e.r, e.g, e.b
+*/
+void RGBset ( uint8_t bright )
 {
-	sfr_TIM1.CCR3H.byte = hibyte(value);
-	sfr_TIM1.CCR3L.byte = lobyte(value);
-}
-
-void RGBsetG ( uint16_t value )
-{
-	sfr_TIM1.CCR1H.byte = hibyte(value);
-	sfr_TIM1.CCR1L.byte = lobyte(value);
-}
-
-void RGBsetB ( uint16_t value )
-{
-	sfr_TIM1.CCR4H.byte = hibyte(value);
-	sfr_TIM1.CCR4L.byte = lobyte(value);
+	uint16_t v;
+	
+	v = (uint16_t)e.r * bright;
+	sfr_TIM1.CCR3H.byte = hibyte(v);
+	sfr_TIM1.CCR3L.byte = lobyte(v);
+	v = (uint16_t)e.g * bright;
+	sfr_TIM1.CCR1H.byte = hibyte(v);
+	sfr_TIM1.CCR1L.byte = lobyte(v);
+	v = (uint16_t)e.b * bright;
+	sfr_TIM1.CCR4H.byte = hibyte(v);
+	sfr_TIM1.CCR4L.byte = lobyte(v);
 }

@@ -6,6 +6,7 @@
 #include "iface.h"
 #include "ds3231.h"
 #include "eeprom.h"
+#include "rgb.h"
 
 /*
 longpress_keyX		-	in keyivents_counters
@@ -97,7 +98,7 @@ void keyevents_counters ( void )
 	if (i.timeSetupCounter){
 		i.timeSetupCounter--;
 		if (!i.timeSetupCounter){
-			i.display_state = SETUP_NO;
+			iface_exit_setup();
 		}
 	}
 	
@@ -108,21 +109,19 @@ void keyevents_counters ( void )
 
 void event_single_key1(void)
 {
-	switch(i.display_state){
+	uint8_t s = i.display_state;
+	uint8_t v = i.setupValue;
+	
+	switch(s){
 		case SETUP_NO:
-				//if (!nixie_antipoison_is_active(&ap)) {
-				apStart();
-				//}
+			apStart();
 			break;
+		
 		case SETUP_HOURS:
 			iface_flag05sReset();
 			++i.hoursSetupValue;
 			if ((i.hoursSetupValue&0x0F) > 0x09){i.hoursSetupValue +=0x06;}
-			if(e.f1224){
-				if (i.hoursSetupValue > 0x12) 			{i.hoursSetupValue = 0;}
-			}else{
-				if (i.hoursSetupValue > 0x23) 			{i.hoursSetupValue = 0;}
-			}
+			if (i.hoursSetupValue > 0x23) 			{i.hoursSetupValue = 0;}
 			break;
 		
 		case SETUP_MINUTES:
@@ -133,74 +132,33 @@ void event_single_key1(void)
 			break;
 		
 		case SETUP_R:
-			++i.setupValue;
-			displayRset(i.setupValue);
-			break;
-		
 		case SETUP_G:
-			++i.setupValue;
-			displayGset(i.setupValue);
-			break;
-		
 		case SETUP_B:
-			++i.setupValue;
-			displayBset(i.setupValue);
-			break;
-			
-		case	SETUP_F1224:
-			i.setupValue = 0;	//todo disable, 12h time display is not working yet!
-			break;
-			
-		case	SETUP_ZERO:
-		case  SETUP_NIGHT_BR_EN:
-		case	SETUP_NIGHT_RGB_EN:
-		case  SETUP_ANTIPOISONING_AT_NIGHT_ONLY:
-			if (i.setupValue){
-				i.setupValue = 0;
-			}else{
-				i.setupValue = 1;
-			}
+			// the color is changed in e only, it is saved by K2 or reloaded from EEPROM by timeout
+			++EE(R_ADDR + s - SETUP_R);
+			RGBset(100);
 			break;
 		
-		case SETUP_COLON_BLINKING_TYPE:
-			i.setupValue++;
-			if (i.setupValue > 2){
-				i.setupValue = 0;
-			}
-			break;
-
 		case SETUP_BRIGHT:
 		case SETUP_NIGHT_BR:
-			i.setupValue--;
-			if (i.setupValue > 100){
-				i.setupValue = 100;
+		case SETUP_RGB_BR:
+		case SETUP_RGB_NIGHT_BR:
+			// brightness goes down: 100..0 (digits: 100..5 day, 100..5,0 night) and again from 100
+			if (--v > 100){
+				v = 100;
+			}else if ((v < BRIGHT_MIN) && (s <= SETUP_NIGHT_BR)){
+				v = (s == SETUP_NIGHT_BR) ? 0 : 100;
 			}
-			if (i.setupValue < 5){
-				i.setupValue = 0;
-			}
-			
-			if (i.setupValue > 4){
-				displaySetBright(i.setupValue);
-			}
-			break;
-		
-		case SETUP_NIGHT_BR_START_H:
-		case SETUP_NIGHT_BR_END_H:
-			++i.setupValue;
-			if(e.f1224){
-				if (i.setupValue > 12)			{i.setupValue=0;}
-			}else{
-				if (i.setupValue > 23)			{i.setupValue=0;}
-			}
-			break;
-		
-		case SETUP_NIGHT_BR_START_M:
-		case SETUP_NIGHT_BR_END_M:
-			++i.setupValue;
-			if (i.setupValue > 59) 				{i.setupValue = 0;}
+			i.setupValue = v;
+			iface_menu_preview();
 			break;
 		
 		default:
+			// other settings menu items: 0..max
+			if (s <= SETUP_MENU_LAST){
+				if (++v > eeMax[s]) {v = 0;}
+				i.setupValue = v;
+			}
 			break;
 	}
 	if (i.display_state!=SETUP_NO){
@@ -212,125 +170,51 @@ void event_single_key1(void)
 void event_single_key2(void)
 {
 	uint8_t seconds = 0;
+	uint8_t s = i.display_state;
 	
-	switch (i.display_state){
+	switch (s){
+		case SETUP_NO:
+			break;
+		
 		case SETUP_HOURS:
 			i.display_state = SETUP_MINUTES;
 			break;
 			
 		case SETUP_MINUTES:
 			ds3231_write_time(&seconds,&i.minutesSetupValue,&i.hoursSetupValue);
-			i.display_state = SETUP_NO;
+			i.minutes = i.minutesSetupValue;
+			i.hours = i.hoursSetupValue;
+			iface_exit_setup();
 			bitmaskclr(ki.bf,S2_M);	//disable fast release key2 to prevent toggle RGB
 			break;
 		
 		case SETUP_R:
-			i.display_state++;
-			EEPROM_writeByte(R_ADDR,i.setupValue);
-			i.setupValue = EEPROM_readByte(G_ADDR);
-			break;
-		
 		case SETUP_G:
+			EEPROM_set(R_ADDR + s - SETUP_R, EE(R_ADDR + s - SETUP_R));
 			i.display_state++;
-			EEPROM_writeByte(G_ADDR,i.setupValue);
-			i.setupValue = EEPROM_readByte(B_ADDR);
 			break;
 		
 		case SETUP_B:
-			i.display_state = SETUP_NO;
-			EEPROM_writeByte(B_ADDR,i.setupValue);
+			EEPROM_set(B_ADDR, e.b);
+			iface_exit_setup();
 			bitmaskclr(ki.bf,S2_M);	//disable fast release key2 to prevent toggle RGB
 			break;
 		
-		case SETUP_ZERO:
-			e.zeroEn = i.setupValue;
-			EEPROM_writeByte(ZERO_ADDR,e.zeroEn);
-			i.display_state++;
-			i.setupValue = e.f1224;
-			break;
-		
-		case SETUP_F1224:
-			e.f1224 = i.setupValue;
-			EEPROM_writeByte(F1224_ADDR,e.f1224);
-			i.display_state++;
-			i.setupValue = e.bright;
-			displaySetBright(i.setupValue);
-			break;
-		
-		case SETUP_BRIGHT:
-			i.display_state++;
-			e.bright = i.setupValue;
-			EEPROM_writeByte(BRIGHT_ADDR,e.bright);
-			i.setupValue = e.nBright;
-			displaySetBright(i.setupValue);
-			break;
-		
-		case SETUP_NIGHT_BR:
-			e.nBright = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_ADDR,e.nBright);
-			i.display_state++;
-			i.setupValue = e.nBrightEn;
-			displaySetBright(100);
-			break;
-		
-		case SETUP_NIGHT_BR_EN:
-			e.nBrightEn = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_EN_ADDR,e.nBrightEn);
-			i.display_state++;
-			i.setupValue = e.nBrightStartH;
-			break;
-		
-		case SETUP_NIGHT_BR_START_H:
-			e.nBrightStartH = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_START_H_ADDR,e.nBrightStartH);
-			i.display_state++;
-			i.setupValue = e.nBrightStartM;
-			break;
-		
-		case SETUP_NIGHT_BR_START_M:
-			e.nBrightStartM = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_START_M_ADDR,e.nBrightStartM);
-			i.display_state++;
-			i.setupValue = e.nBrightEndH;
-			break;
-		
-		case SETUP_NIGHT_BR_END_H:
-			e.nBrightEndH = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_STOP_H_ADDR,e.nBrightEndH);
-			i.display_state++;
-			i.setupValue = e.nBrightEndM;
-			break;
-		
-		case SETUP_NIGHT_BR_END_M:
-			e.nBrightEndM = i.setupValue;
-			EEPROM_writeByte(NIGHT_BR_STOP_M_ADDR,e.nBrightEndM);
-			i.display_state++;
-			i.setupValue = e.rgbAtNightEn;
-			break;
-		
-		case SETUP_NIGHT_RGB_EN:
-			e.rgbAtNightEn = i.setupValue;
-			EEPROM_writeByte(NIGHT_RGB_EN_ADDR,e.rgbAtNightEn);
-			i.display_state++;
-			i.setupValue = e.antipoisoningAtNihgtOnly;
-			break;
-		
-		case SETUP_ANTIPOISONING_AT_NIGHT_ONLY:
-			e.antipoisoningAtNihgtOnly = i.setupValue;
-			EEPROM_writeByte(ANTIPOISONING_AT_NIGHT_ONLY_ADDR,e.antipoisoningAtNihgtOnly);
-			i.display_state++;
-			i.setupValue = e.colonBlinkingType;
-			break;
-
-		case SETUP_COLON_BLINKING_TYPE:
-			e.colonBlinkingType = i.setupValue;
-			EEPROM_writeByte(COLON_BLINKING_TYPE,e.colonBlinkingType);
-			i.display_state = SETUP_NO;
-			bitmaskclr(ki.bf,S2_M);	//disable fast release key2 to prevent toggle RGB
-			break;
-
 		default:
-			i.display_state = SETUP_NO;
+			// settings menu: save the value and go to the next item
+			if (s > SETUP_MENU_LAST){
+				iface_exit_setup();
+				break;
+			}
+			EEPROM_set(s, i.setupValue);
+			if (s == SETUP_MENU_LAST){
+				iface_exit_setup();
+				bitmaskclr(ki.bf,S2_M);	//disable fast release key2 to prevent toggle RGB
+			}else{
+				i.display_state = ++s;
+				i.setupValue = EE(s);
+				iface_menu_preview();
+			}
 			break;
 	}
 }
@@ -347,7 +231,8 @@ void longpress_key1(void)
 				displaySetBright(100);
 				bitmaskclr(ki.bf,S1_M);
 			}
-		}else if (i.display_state > SETUP_ZERO && i.display_state < SETUP_NO){
+		}else if (i.display_state > SETUP_MENU_LAST || eeMax[i.display_state] > 9){
+			// key repeat for values, not for on/off items
 			if (ki.lp_counter[S1] >= 18){
 				if(ki.kr_counter[S1] >= 1){
 					ki.kr_counter[S1] = 0;
@@ -369,12 +254,9 @@ void longpress_key2(void)
 		if (i.display_state == SETUP_NO){
 			if (ki.lp_counter[S2] >= 2*10){
 				i.display_state = SETUP_R;
-				i.setupValue = EEPROM_readByte(R_ADDR);
-				displayRset(EEPROM_readByte(R_ADDR));
-				displayGset(EEPROM_readByte(G_ADDR));
-				displayBset(EEPROM_readByte(B_ADDR));
 				i.timeSetupCounter = 60*10;
 				displaySetBright(100);
+				RGBset(100);
 				bitmaskclr(ki.bf,S2_M);
 			}
 		}
@@ -387,8 +269,7 @@ void longpress_key1_2(void){
 			i.display_state = SETUP_ZERO;
 			i.setupValue = e.zeroEn;
 			i.timeSetupCounter = 60*10;
-			displayRGBset(0);
-			displaySetBright(100);
+			iface_menu_preview();
 		}
 		bitmaskclr(ki.bf,(S1_M+S2_M));
 	}

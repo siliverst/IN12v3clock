@@ -10,11 +10,9 @@ static volatile	uint8_t zero_data[5] 							= {0,0,0,0,0};
 static volatile uint8_t disp_data[5]							= {0,0,0,0,0};
 static 					uint8_t dotPulseCounter;
 			 volatile uint8_t flag10ms;
-static 					uint16_t displayBright;
-static volatile uint8_t	bright0;
+static volatile uint8_t	bright0;						// current digits brightness, %
 
 static uint8_t *displayNixieBuffPrepare(uint8_t *inbuff, uint8_t dmask);
-static void displaySetDotBright( uint8_t bright);
 
 void displayInit ( void )
 {
@@ -50,9 +48,7 @@ void displayInit ( void )
 	displayDot(0);
 	hc595ChainShiftOut(zero_data,sizeof(zero_data));
 	
-	
 	RGBinit();
-	displayRGBset(e.rgbGlobalEn);
 }
 
 //inbuff -> {minutes,tens of minutes,hours,tens of hours}
@@ -215,19 +211,19 @@ static uint8_t *displayNixieBuffPrepare(uint8_t *inbuff, uint8_t dmask)
 }
 
 /*uint8_t bright -> 0-100%
+TIM2 period is 10000, so the compare value is bright*100
 */
 void displaySetBright(uint8_t bright)
 {
+	uint16_t c;
+	
 	bright0 = bright;
 	if (bright == 0){
 		memset(disp_data,0,sizeof(disp_data));
 	}else{
-		displayBright = scale(bright,100,10000);
-		if (displayBright < NIXIE_MIN_BRIGHT){
-			displayBright = NIXIE_MIN_BRIGHT;
-		}
-		sfr_TIM2.CCR1H.byte = hibyte(displayBright);		// set PWM channel 1 duty period
-		sfr_TIM2.CCR1L.byte = lobyte(displayBright);
+		c = (uint16_t)bright * 100;
+		sfr_TIM2.CCR1H.byte = hibyte(c);		// set PWM channel 1 duty period
+		sfr_TIM2.CCR1L.byte = lobyte(c);
 	}
 }
 
@@ -244,20 +240,20 @@ void displayNixie(uint8_t *data, uint8_t full_bright_bitmask)
 	memcpy(zero_data,displayNixieBuffPrepare(data,full_bright_bitmask),sizeof(zero_data));
 }
 
-void displayDot (uint8_t state) 
+/*
+bright -> 0-100% of the current digits brightness
+*/
+void displayDot (uint8_t bright)
 {
-	uint16_t bright = displayBright;
+	uint16_t c = (uint16_t)bright * bright0;	// 100% * 100% = TIM2 period
 	
-	if (state == 0) {
-		sfr_TIM2.IER.CC2IE 		= 0;							// TIM2 channel 2 compare interrupt disable
+	if (c == 0) {
+		sfr_TIM2.IER.CC2IE 		= 0;						// TIM2 channel 2 compare interrupt disable
 		DOT_PIN = 0;
 	}else {
-		if (bright < DOT_MIN_BRIGHT) {
-			bright = DOT_MIN_BRIGHT;
-		}
-		sfr_TIM2.CCR2H.byte = hibyte(bright);		// set PWM channel 2 duty period
-		sfr_TIM2.CCR2L.byte = lobyte(bright);
-		sfr_TIM2.IER.CC2IE 		= 1;							// TIM2 channel 2 compare interrupt enable
+		sfr_TIM2.CCR2H.byte = hibyte(c);		// set PWM channel 2 duty period
+		sfr_TIM2.CCR2L.byte = lobyte(c);
+		sfr_TIM2.IER.CC2IE 		= 1;					// TIM2 channel 2 compare interrupt enable
 	}
 }
 
@@ -266,44 +262,22 @@ void displayDotPulse (void)
 	dotPulseCounter = 0;
 }
 
+// every 10ms, works 0.5s after displayDotPulse() only, so it does not touch the dot in setup modes
 void displayDotPulseProc (void)
 {
-	switch (e.colonBlinkingType) {
-		case 1:
-			if (dotPulseCounter < 50) { 
-				displaySetDotBright(50 * 4);
-				dotPulseCounter++;
-			}
-			break;
-		case 2:
-			displaySetDotBright(0);
-			break;
-		default:
-			if (dotPulseCounter < 25) {
-				displaySetDotBright(dotPulseCounter * 4);
-			} else if (dotPulseCounter < 50) {
-				displaySetDotBright((49 - dotPulseCounter) * 4);
-			}
-			if (dotPulseCounter < 50) {
-				dotPulseCounter++;
-			}
-			break;
-	}
-}
-
-static void displaySetDotBright( uint8_t bright)
-{
-	uint16_t b;
-	
-	if (bright == 0) {
-		sfr_TIM2.IER.CC2IE 		= 0;						// TIM2 channel 2 compare interrupt disable
-		DOT_PIN = 0;
-	}else {
-		b = scale(bright,100,displayBright);
-		if (b < DOT_MIN_BRIGHT) {b = DOT_MIN_BRIGHT;}
-		sfr_TIM2.CCR2H.byte = hibyte(b);		// set PWM channel 2 duty period
-		sfr_TIM2.CCR2L.byte = lobyte(b);
-		sfr_TIM2.IER.CC2IE 		= 1;					// TIM2 channel 2 compare interrupt enable
+	if (dotPulseCounter < 50) {
+		switch (e.colonBlinkingType) {
+			case 0:
+				displayDot((dotPulseCounter < 25 ? dotPulseCounter : 49 - dotPulseCounter) * 4);
+				break;
+			case 1:
+				displayDot(100);
+				break;
+			default:
+				displayDot(0);
+				break;
+		}
+		dotPulseCounter++;
 	}
 }
 
@@ -336,32 +310,3 @@ ISR_HANDLER (TIM2_CAP_ISR, _TIM2_CAPCOM_CC1IF_VECTOR_)
 	}
   return;
 } // TIM2_CAP_ISR
-
-
-void displayRGBset (uint8_t state)
-{
-	if (state){
-		RGBsetR((uint16_t)scale(EEPROM_readByte(R_ADDR),255,displayBright));
-		RGBsetG((uint16_t)scale(EEPROM_readByte(G_ADDR),255,displayBright));
-		RGBsetB((uint16_t)scale(EEPROM_readByte(B_ADDR),255,displayBright));
-	}else{
-		RGBsetR(0);
-		RGBsetG(0);
-		RGBsetB(0);
-	}
-}
-
-void displayRset(uint8_t value)
-{
-	RGBsetR((uint16_t)scale(value,255,displayBright));
-}
-
-void displayGset(uint8_t value)
-{
-	RGBsetG((uint16_t)scale(value,255,displayBright));
-}
-
-void displayBset(uint8_t value)
-{
-	RGBsetB((uint16_t)scale(value,255,displayBright));
-}

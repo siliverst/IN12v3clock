@@ -6,21 +6,25 @@ extern "C" {
 #endif
 
 #include "display.h"
+#include "eeprom.h"
 #define AP_CYCLES	2
 
+// settings menu items are the EEPROM addresses
 enum setup_states{
-	SETUP_ZERO,
-	SETUP_F1224,
-	SETUP_BRIGHT,
-	SETUP_NIGHT_BR,
-	SETUP_NIGHT_BR_EN,
-	SETUP_NIGHT_BR_START_H,
-	SETUP_NIGHT_BR_START_M,
-	SETUP_NIGHT_BR_END_H,
-	SETUP_NIGHT_BR_END_M,
-	SETUP_NIGHT_RGB_EN,
-	SETUP_ANTIPOISONING_AT_NIGHT_ONLY,
-	SETUP_COLON_BLINKING_TYPE,
+	SETUP_ZERO						= ZERO_ADDR,
+	SETUP_F1224						= F1224_ADDR,
+	SETUP_BRIGHT					= BRIGHT_ADDR,
+	SETUP_NIGHT_BR				= NIGHT_BR_ADDR,
+	SETUP_RGB_BR					= RGB_BR_ADDR,
+	SETUP_RGB_NIGHT_BR		= RGB_NIGHT_BR_ADDR,
+	SETUP_NIGHT_EN				= NIGHT_EN_ADDR,
+	SETUP_NIGHT_START_H		= NIGHT_START_H_ADDR,
+	SETUP_NIGHT_START_M		= NIGHT_START_M_ADDR,
+	SETUP_NIGHT_END_H			= NIGHT_END_H_ADDR,
+	SETUP_NIGHT_END_M			= NIGHT_END_M_ADDR,
+	SETUP_AP_DAY					= AP_DAY_ADDR,
+	SETUP_AP_NIGHT				= AP_NIGHT_ADDR,
+	SETUP_COLON						= COLON_ADDR,
 	SETUP_R,
 	SETUP_G,
 	SETUP_B,
@@ -28,6 +32,7 @@ enum setup_states{
 	SETUP_MINUTES,
 	SETUP_NO = 255
 };
+#define SETUP_MENU_LAST		SETUP_COLON
 
 typedef struct  
 {
@@ -44,6 +49,7 @@ typedef struct
 	uint8_t 	counter1s;
 	uint8_t		flag05s;
 	uint8_t		flag100ms;
+	uint8_t		night;							// 1 - night interval is active now
 }Iface;
 
 typedef struct
@@ -69,6 +75,9 @@ uint16_t time_to_minutes(uint8_t hour, uint8_t minute);
 uint8_t is_time_in_interval(uint16_t current_minutes, uint16_t start_minutes, uint16_t end_minutes);
 void apStart (void);
 void RGBtoggle ( void );
+void iface_apply_mode (void);
+void iface_menu_preview (void);
+void iface_exit_setup (void);
 
 #ifdef	__cplusplus
 }
