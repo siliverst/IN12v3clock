@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include "iface.h"
 #include "keyevents.h"
-#include "service_timing.h"
 #include "ds3231.h"
 #include "display.h"
 #include "macro.h"
@@ -12,13 +11,11 @@
 Iface i;
 antipoisoning ap;
 
-static void timer50msProc(void);
 static void iface_display(void);
 static void iface_disp2decDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 static void iface_disp3decDigit (uint16_t value, uint8_t *d0, uint8_t *d1, uint8_t *d2);
 static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
-static void apCounterProc(void);
 static uint8_t apLoop(uint8_t dig);
 static void apProc (void);
 static void apUpdateTime (void);
@@ -37,92 +34,33 @@ void iface_init( void )
 	iface_apply_mode();
 }
 
-void iface_proc ( void ) 
-{
-	static uint8_t proc_fase = 0;
-	static uint8_t counter50ms = 0;
-	static uint8_t counter100ms = 0;
-	static uint8_t localFlag100ms = 0;
-	
-	keyevents_proc();
-	
-	if (i.flag10ms) {
-		set_service_timing_mutex();
-		proc_fase++;
-		switch(proc_fase){
-			case 1: 
-				// counter for time get time from ds3231 and start blinking dot if needed
-				if (++counter50ms> 5-1){
-					counter50ms = 0;
-					timer50msProc();
-				}
-				break;
-			
-			case 2:
-				if (++counter100ms> 10-1){
-					counter100ms = 0;
-					localFlag100ms = 1;	//flag for pocess 100ms tasks
-					
-					//counter for blinking digits while time setup
-					if (++i.counter1s > 10-1){
-						i.counter1s = 0;
-						i.flag05s = 0;
-					}
-					if (i.counter1s > 4){
-						i.flag05s = 1;
-					}
-					
-					//counter for blinking digits while RGB setup
-					if (i.flag100ms){
-						i.flag100ms = 0;
-					} else {
-						i.flag100ms = 1;
-					}
-				}
-				break;
-			
-			case 3:
-				//counter for antipoisoning
-				apCounterProc();
-				break;
-			
-			case 4:
-				if (localFlag100ms){
-					keyevents_counters();
-				}
-				break;
-			
-			case 5:
-				if (localFlag100ms) {
-					iface_display();
-					localFlag100ms = 0;
-				}
-				proc_fase = 0;
-				i.flag10ms = 0;
-				reset_service_timing_mutex();
-				break;
-			
-			default:
-				proc_fase = 0;
-				i.flag10ms = 0;
-				reset_service_timing_mutex();
-				break;
-		}
-	}
-}
-
 void iface_flag05sReset(void)
 {
 	i.counter1s = 0;
 	i.flag05s = 0;
 }
 
-void iface_10ms_proc_en (void)
+/*
+every 100ms: blinking counters, antipoisoning, key timers, display
+*/
+void iface_100ms_proc (void)
 {
-	i.flag10ms = 1;
+	//counter for blinking digits while time setup, 0.5s on/off
+	if (++i.counter1s > 10-1){
+		i.counter1s = 0;
+	}
+	i.flag05s = (i.counter1s > 4);
+	
+	//counter for blinking digits while RGB setup
+	i.flag100ms ^= 1;
+	
+	apProc();
+	keyevents_counters();
+	iface_display();
 }
 
-static void timer50msProc(void)
+// every 50ms: get time from ds3231 and start the dot pulse at a new second
+void iface_50ms_proc (void)
 {
 	static uint8_t secondsLast;
 	
@@ -135,14 +73,6 @@ static void timer50msProc(void)
 	}
 }
 
-
-static void apCounterProc(void)
-{
-	if (++ap.counter > 10-1){
-		ap.counter = 0;
-		apProc();
-	}
-}
 
 //0,9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0
 // border cases:
@@ -180,7 +110,6 @@ void apStart (void)
 {
 	memset(ap.flagEn,1,sizeof(ap.flagEn));
 	ap.procCounter = AP_CYCLES;
-	ap.counter = 10-1;
 	apUpdateTime();
 }
 
@@ -389,11 +318,6 @@ static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1)
 uint8_t bcd_to_decimal(uint8_t bcd)
 {
 	return ((bcd >> 4) * 10) + (bcd & 0x0F);
-}
-
-uint8_t decimal_to_bcd(uint8_t decimal) 
-{
-	return ((decimal / 10) << 4) | (decimal % 10);
 }
 
 uint16_t time_to_minutes(uint8_t hours, uint8_t minutes) 

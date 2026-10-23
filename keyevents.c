@@ -26,11 +26,6 @@ void fastReleaseKey1(void);
 Keyivents ki;
 extern Iface i;
 
-void keyevents_init ( void )
-{
-
-}
-
 void keyevents_proc ( void )
 {
 	ki.keys_mirror = keyboard_get_key();

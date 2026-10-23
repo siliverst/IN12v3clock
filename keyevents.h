@@ -22,7 +22,6 @@ typedef struct {
 
 
 
-void keyevents_init ( void );
 void keyevents_proc ( void );
 void keyevents_counters ( void );
 

@@ -11,6 +11,8 @@ extern "C" {
 #define NIXIE_COUNT				4
 #define NIXIE_OFF					10
 
+extern volatile uint8_t flag10ms;	// set by TIM2 every 10ms
+
 
 void displayInit ( void );
 void displaySetBright(uint8_t bright);

@@ -44,15 +44,13 @@ int main(void) {
 	ds3231Init();
 	keyboard_init();
 	iface_init();
-	service_timing_init();
 	iwdg_init(0xFF);	//1.02s period
 	iwdg_service();
   ENABLE_INTERRUPTS(); 
 
 	
 	while (1) {
-		service_timing_10ms_proc();
-		iface_proc(); 
+		service_timing_proc();
 		iwdg_service();
 	}
 }
