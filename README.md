@@ -155,6 +155,7 @@ Q7 -> 2003A U14 I5, O5-> N1 9
  - `python tools/build.py` builds with both compilers, `python tools/build.py cosmic` or `... sdcc` builds with one.
  - Results go to `build/cosmic/in12v3clock.s19` and `build/sdcc/main.s19`; the script prints ROM/RAM usage and fails if the firmware does not fit into 8 KB.
  - Note: in the STVD Release configuration the Cosmic optimizer is enabled (option `-no` removed), it saves about 540 bytes.
+ - `python tools/flash.py [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file.
 2. Flash the firmware to the STM8S003F3P6 microcontroller.
 - The `in12v3clock_Programmer` directory contains a project for the STVP programmer with a default EEPROM file and a default OPTION BYTE file.
 
