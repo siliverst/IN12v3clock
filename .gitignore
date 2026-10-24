@@ -1,12 +1,10 @@
 /Release/*
 !/Release/*.s19
-/Debug/*
-!/Debug/*.s19
+/Debug/
 /.idea
 /SDCC/*
 !/SDCC/*.s19
 !/SDCC/*.ihx
-/.idea
 /build/
 /CLAUDE.md
 /PORTING.md
