@@ -44,15 +44,32 @@ Other paths are set in one of the ways (an empty value means the default path):
 External libraries: the submodule [STM8_headers](https://github.com/gicking/STM8_headers) (`git clone --recurse-submodules`).
 
 ## Working in VS Code
-Open the project folder in VS Code (`File > Open Folder`). The tasks (`.vscode/tasks.json`):
-- **Ctrl+Shift+B** (task `Build`) — build, asks for the compiler: `cosmic`, `sdcc` or both. The errors go to the Problems panel.
-- `Terminal > Run Task...`:
-  - `Build Cosmic`, `Build SDCC` — build with one compiler without the question;
-  - `Flash` — flash through ST-LINK, asks: Cosmic or SDCC firmware, with or without the default EEPROM (the settings reset);
-  - `Build and flash Cosmic`;
-  - `Special build Cosmic` — test builds: `AP_TEST`, `DIAG_RESET`, `K1_DOUBLE_CLICK=0`;
-  - `Default EEPROM file` — regenerate the default EEPROM file after a change of the settings layout.
-- Output: `build/cosmic/in12v3clock.s19`, `build/sdcc/main.s19`; the build prints the ROM/RAM usage and fails if the firmware does not fit into 8 KB.
+1. Install the tools from the table above. If a tool is not in its default path, set the path in `.vscode/settings.json`.
+2. Open the project folder: `File > Open Folder`. VS Code offers the recommended extensions (C/C++, Python), install them.
+3. **Build:** `Ctrl+Shift+B`, choose the compiler (`cosmic`, `sdcc` or both). The terminal at the bottom shows the result:
+   `COSMIC: ROM 6611 / 8192 (1581 free) ...`. The errors are in the Problems panel (`Ctrl+Shift+M`), a click opens the line.
+4. **Other tasks** (flashing etc.): `Terminal > Run Task...` (or `Ctrl+Shift+P` > `Tasks: Run Task`), choose the task:
+
+   | Task | What it does |
+   |------|--------------|
+   | `Build` | build, asks for the compiler (the same as `Ctrl+Shift+B`) |
+   | `Build Cosmic`, `Build SDCC` | build with one compiler, no question |
+   | `Flash` | flash through ST-LINK, asks: Cosmic or SDCC firmware, with or without the default EEPROM (the settings reset). Option bytes are not touched |
+   | `Build and flash Cosmic` | build and flash at once — the usual one |
+   | `Special build Cosmic` | test builds: `AP_TEST` (the time runs 6 times faster, antipoisoning every minute), `DIAG_RESET` (the reset cause at start), `K1_DOUBLE_CLICK=0` |
+   | `Default EEPROM file` | regenerate the default EEPROM file after a change of the settings layout |
+
+5. **Flashing:** connect the ST-LINK to the debug connector, power the clock, run `Flash` or `Build and flash Cosmic`.
+   Success is two lines in the terminal:
+   ```
+   <<< Programming PROGRAM MEMORY succeeds
+   <<< Verifying PROGRAM MEMORY succeeds
+   ```
+   `ERROR : Cannot communicate with the device` — the ST-LINK is not connected or the clock has no power.
+   The option byte `AFR0` must be set once (see below), the scripts do not touch the option bytes.
+6. **Repeat the last task:** `Ctrl+Shift+P` > `Tasks: Rerun Last Task`. A key can be assigned to it:
+   `File > Preferences > Keyboard Shortcuts`, search `Rerun Last Task`.
+- Output files: `build/cosmic/in12v3clock.s19`, `build/sdcc/main.s19`. The build fails if the firmware does not fit into 8 KB.
 
 The old STVD project (`in12v3clock.stp`) still works, but VS Code with the scripts is the main way now.
 
