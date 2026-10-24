@@ -4,7 +4,7 @@
 Alternate firmware for the GeekStyles IN12 V3 Nixie nixieclock PCB.
 
 ## Version
-- **2.00**: Rework of the firmware (branch `refactor`):
+- **2.00**: Rework of the firmware:
   - day and night modes with smooth brightness change, separate digits and backlight brightness, the night digits can be off;
   - perceptually linear backlight brightness (CIE lightness), backlight on/off by K2 for day and night separately;
   - digits PWM 100/200/400 Hz with flicker free updates, fast 595 shift out (assembler);
