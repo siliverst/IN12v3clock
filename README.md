@@ -274,7 +274,7 @@ the clock starts at 00:00 — set the time again.
          `0` — Pulse every second  
          `1` — Always on (at the digits brightness)  
          `2` — Always off  
-         `3` — Slow pulse: lights up smoothly during one second, goes out during the next one  
+         `3` — Slow pulse: lights up smoothly (0.5 s), stays on (0.5 s), goes out smoothly (0.5 s), stays off (0.5 s)  
          `4` — Blinking: 0.5 s on, 0.5 s off  
          `5` — Slow blinking: 1 s on, 1 s off  
     

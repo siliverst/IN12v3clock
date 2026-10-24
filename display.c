@@ -152,8 +152,10 @@ void displayDotPulseProc (void)
 			case 1:
 				displayDot(100);
 				break;
-			case 3:																		// 2s pulse: lights up in an even second, goes out in an odd one
-				displayDot(dotOdd ? 99 - c : c + 1);
+			case 3:																		// 2s: 0.5s lights up, 0.5s on, 0.5s goes out, 0.5s off
+				c = (c < 50) ? c * 2 + 2 : 100;					// 2..100, then hold
+				if (dotOdd) {c = 100 - c;}
+				displayDot((uint16_t)c * c / 100);		// square: the eye sees the low part of the ramp better
 				break;
 			case 4:																		// 0.5s on, 0.5s off
 				displayDot(c < 50 ? 100 : 0);
