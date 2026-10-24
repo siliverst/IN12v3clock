@@ -66,18 +66,12 @@ External libraries: the submodule [STM8_headers](https://github.com/gicking/STM8
    <<< Verifying PROGRAM MEMORY succeeds
    ```
    `ERROR : Cannot communicate with the device` — the ST-LINK is not connected or the clock has no power.
-   The option byte `AFR0` must be set once (see below), the scripts do not touch the option bytes.
+   The option byte `AFR0` must be set once (see [Flashing](#flashing)), the scripts do not touch the option bytes.
 6. **Repeat the last task:** `Ctrl+Shift+P` > `Tasks: Rerun Last Task`. A key can be assigned to it:
    `File > Preferences > Keyboard Shortcuts`, search `Rerun Last Task`.
 - Output files: `build/cosmic/in12v3clock.s19`, `build/sdcc/main.s19`. The build fails if the firmware does not fit into 8 KB.
 
 The old STVD project (`in12v3clock.stp`) still works, but VS Code with the scripts is the main way now.
-
----
-
-## Important Configuration
-Before flashing the firmware, set the option byte `AFR0` in the ST Visual Programmer:
-- **Port C5, C6 & C7**: Configure to **Alternate Function**.
 
 ---
 
@@ -209,18 +203,62 @@ Q7 -> 2003A U14 I5, O5-> N1 9
    (shows the reset cause at start), `-DAP_TEST` (test: the time runs 6 times faster, antipoisoning every minute).
  - `python tools/eedata.py` regenerates the default EEPROM file from the sources (after a change of the settings layout).
  - `python tools/flash.py [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file.
-2. Flash the firmware to the STM8S003F3P6 microcontroller.
-- The `in12v3clock_Programmer` directory contains a project for the STVP programmer with a default EEPROM file and a default OPTION BYTE file.
-
- - SWD pinout:
- 
- ![SWD pinout](Photo/swd_pinout.jpg)
-
-
- Here you can find the pinout of your ST-Link programmer:  
- [Wiki: ST-Link Pinout](https://wiki.cuvoodoo.info/doku.php?id=jtag)
-
+2. Flash the firmware, see [Flashing](#flashing).
 3. Verify the board's functionality.
+
+## Flashing
+The STM8S003F3 has no UART bootloader, it is flashed only through **SWIM** with an **ST-LINK V2** (an original or a cheap clone).
+
+**Connection** — the debug connector of the board (see [Debug Connector](#debug-connector)):
+- ST-LINK `SWIM` -> pin 2, `RST` -> pin 3, `GND` -> pin 4;
+- power the clock from its own power supply. Pin 1 (3.3V): an original ST-LINK only measures the target voltage there,
+  a clone outputs 3.3V — with the clock powered by its supply it is safer not to connect it.
+
+![SWD pinout](Photo/swd_pinout.jpg)
+
+The pinout of your ST-LINK: [Wiki: ST-Link Pinout](https://wiki.cuvoodoo.info/doku.php?id=jtag)
+
+**Option byte `AFR0` (once for a new chip):** the backlight green channel is TIM1_CH1 on PC6, it is available only
+with the alternate function remapping `AFR0` (Port C5, C6, C7 — alternate function). Without it the green LEDs do not work.
+The file `in12v3clock_Programmer/in12v3clock_STVP_OPTION BYTE.hex` has this setting, the scripts below never write the option bytes.
+
+**Files:**
+- firmware: `Release/in12v3clock.s19` (precompiled, Cosmic) or your build `build/cosmic/in12v3clock.s19`;
+  SDCC: `SDCC/main.s19` / `build/sdcc/main.s19`;
+- default settings (EEPROM): `in12v3clock_Programmer/in12v3clock_STVP_data.s19` (`.hex`). Not needed: the firmware writes
+  the default settings itself if the EEPROM is empty or has an old layout.
+
+### Windows: ST Visual Programmer (STVP), GUI
+Install [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) (it also installs the ST-LINK driver).
+1. Open the project `in12v3clock_Programmer/in12v3clock_STVP.stp` (`File > Open Project`). It is set for ST-LINK, SWIM,
+   STM8S003F3 and loads the files: PROGRAM MEMORY — `Release/in12v3clock.s19`, DATA MEMORY — the default settings,
+   OPTION BYTE — `AFR0`. If a file is not found, load it by `File > Open...` on its tab.
+   Without the project: `Configure > Configure ST Visual Programmer`: Hardware `ST-LINK`, Port `USB`, Programming mode `SWIM`,
+   Device `STM8S003F3`; then load the files on the tabs.
+2. A new chip: tab **OPTION BYTE**, check that `AFR0` is `Port C5... Alternate Active`, then `Program > Current tab`.
+3. Tab **PROGRAM MEMORY**: `Program > Current tab` (Ctrl+P). The verify runs after the programming.
+4. Tab **DATA MEMORY** (optional, resets the settings to the defaults): `Program > Current tab`.
+
+`Program > All tabs` writes all three at once (the settings are reset).
+
+### Windows: command line or VS Code
+`python tools/flash.py [sdcc] [data]` or the VS Code task `Flash` (see [Working in VS Code](#working-in-vs-code)).
+It uses `STVP_CmdLine.exe` from STVP, writes the program memory (and the default EEPROM with `data`), verifies it,
+never touches the option bytes. Set `AFR0` once with the STVP GUI.
+
+### Linux / macOS: stm8flash
+[stm8flash](https://github.com/vdudouyt/stm8flash) works with ST-LINK V2 (on Linux add the udev rule from its README
+or run with `sudo`):
+```bash
+make flash                                                   # build/sdcc/main.ihx, the same as:
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w build/sdcc/main.ihx
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w Release/in12v3clock.s19          # the precompiled Cosmic firmware
+stm8flash -c stlinkv2 -p stm8s003f3 -s eeprom -w in12v3clock_Programmer/in12v3clock_STVP_data.hex   # settings reset (optional)
+# option bytes, once for a new chip: OPT0..NOPT5 with AFR0 = 1 (OPT2 = 0x01, NOPT2 = 0xFE)
+printf '\x00\x00\xff\x01\xfe\x00\xff\x00\xff\x00\xff' > opt.bin
+stm8flash -c stlinkv2 -p stm8s003f3 -s opt -w opt.bin
+```
+The stm8flash commands are not tested by the author on this board (the Windows way is).
 
 ---
 
