@@ -194,14 +194,13 @@ Q7 -> 2003A U14 I5, O5-> N1 9
  - Or use precompiled firmware file: `Release\in12v3clock.s19` 
 
  **When using SDCC:**
- - Install Docker.
- - Open Windows Terminal.
- - Run the `run.cmd` file.
- - Run command `make clean` in the terminal window.
- - Run command `make` in the terminal window.
+ - Windows: VS Code task `Build SDCC` or `python tools/build.py sdcc` (see below).
+ - Linux / macOS: install `sdcc` (4.5 is tested, older versions may not fit into 8 KB), `make`, `binutils`, then in the project folder:
+   - `make` — build to `build/sdcc/main.ihx` and `main.s19`, `make clean` — remove the build;
+   - `make flash` — flash through ST-LINK V2 with [stm8flash](https://github.com/vdudouyt/stm8flash) (option bytes and EEPROM are not touched).
  - Or use the precompiled files (`main.s19` or `main.ihx`) located in the `SDCC` directory.
 
- **Command line build (no STVD, no Docker):**
+ **Command line build on Windows (no STVD):**
  - Requires Python 3 and installed Cosmic CXSTM8 and/or SDCC (default install paths, or set `COSMIC_DIR` / `SDCC_DIR`).
  - `python tools/build.py` builds with both compilers, `python tools/build.py cosmic` or `... sdcc` builds with one.
  - Results go to `build/cosmic/in12v3clock.s19` and `build/sdcc/main.s19`; the script prints ROM/RAM usage and fails if the firmware does not fit into 8 KB.
