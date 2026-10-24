@@ -326,6 +326,11 @@ Next=Root.Source Files.ds3231.c
 [Root.Source Files.ds3231.c]
 ElemType=File
 PathName=ds3231.c
+Next=Root.Source Files.effects.c
+
+[Root.Source Files.effects.c]
+ElemType=File
+PathName=effects.c
 Next=Root.Source Files.hc595.c
 
 [Root.Source Files.hc595.c]
@@ -463,6 +468,11 @@ Next=Root.Include Files.ds3231.h
 [Root.Include Files.ds3231.h]
 ElemType=File
 PathName=ds3231.h
+Next=Root.Include Files.effects.h
+
+[Root.Include Files.effects.h]
+ElemType=File
+PathName=effects.h
 Next=Root.Include Files.hc595.h
 
 [Root.Include Files.hc595.h]

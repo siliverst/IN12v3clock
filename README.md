@@ -4,6 +4,16 @@
 Alternate firmware for the GeekStyles IN12 V3 Nixie nixieclock PCB.
 
 ## Version
+- **2.00**: Rework of the firmware (branch `refactor`):
+  - day and night modes with smooth brightness change, separate digits and backlight brightness, the night digits can be off;
+  - perceptually linear backlight brightness (CIE lightness), backlight on/off by K2 for day and night separately;
+  - digits PWM 100/200/400 Hz with flicker free updates, fast 595 shift out (assembler);
+  - minute change effects (fade, roll, train, elastic), antipoisoning effects, glitches
+    (ideas from [NixieClock v2](https://github.com/AlexGyver/NixieClock_v2) by AlexGyver);
+  - 6 colon modes, leading zero, 12/24-hour format;
+  - settings menu by groups, the night start and end set as a time;
+  - DS3231: ~100 kHz I2C, the oscillator is enabled, the lost time (empty battery) is reset to 00:00;
+  - command line build and flashing (`tools/`), many bug fixes. Cosmic: ~6.6 KB of 8 KB.
 - **1.00**: Initial release.
 
 ## Description
@@ -17,8 +27,8 @@ The STM8S003F3P6 microcontroller features 8 KB of Flash memory, 1 KB of RAM, and
 ---
 
 ## Requirements
-1. **Cosmic STM8 compiller + STVD**
-2. Alternate is the **SDCC compiller** (the binary file is slightly larger compared to COSMIC).
+1. **Cosmic STM8 compiler** (CXSTM8, free license), with STVD or from the command line (`tools/build.py`).
+2. Alternative: the **SDCC compiler** (4.5 is tested; the binary is ~0.8 KB larger, about 800 bytes of 8 KB are left).
 3. **External Libraries**:
 - Added submodule: [STM8_headers](https://github.com/gicking/STM8_headers).
   
@@ -139,7 +149,7 @@ Q7 -> 2003A U14 I5, O5-> N1 9
    ```
 
  **When using COSMIC:**
- - Compile the firmware using Cosmic STM8 v4.6 toolchain. 
+ - Compile the firmware using Cosmic STM8 v4.6 toolchain (STVD project `in12v3clock.stp`, configuration Release).
  - Or use precompiled firmware file: `Release\in12v3clock.s19` 
 
  **When using SDCC:**
@@ -155,6 +165,9 @@ Q7 -> 2003A U14 I5, O5-> N1 9
  - `python tools/build.py` builds with both compilers, `python tools/build.py cosmic` or `... sdcc` builds with one.
  - Results go to `build/cosmic/in12v3clock.s19` and `build/sdcc/main.s19`; the script prints ROM/RAM usage and fails if the firmware does not fit into 8 KB.
  - Note: in the STVD Release configuration the Cosmic optimizer is enabled (option `-no` removed), it saves about 540 bytes.
+ - Build options: `python tools/build.py cosmic -DK1_DOUBLE_CLICK=0` (no double click of K1), `-DDIAG_RESET`
+   (shows the reset cause at start), `-DAP_TEST` (test: the time runs 6 times faster, antipoisoning every minute).
+ - `python tools/eedata.py` regenerates the default EEPROM file from the sources (after a change of the settings layout).
  - `python tools/flash.py [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file.
 2. Flash the firmware to the STM8S003F3P6 microcontroller.
 - The `in12v3clock_Programmer` directory contains a project for the STVP programmer with a default EEPROM file and a default OPTION BYTE file.
@@ -260,7 +273,7 @@ the clock starts at 00:00 — set the time again.
     **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
     **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
     **2.4** Backlight, night: `0–99%`  
-    **2.5** Digits PWM frequency: `0` — 100 Hz, `1` — 200 Hz (default), `2` — 400 Hz; shown at the night brightness to see the flicker  
+    **2.5** Digits PWM frequency: `0` — 100 Hz, `1` — 200 Hz (default), `2` — 400 Hz (experimental: at a low brightness some cathodes may not glow fully); shown at the night brightness to see the flicker  
 
     **3. Night**  
     **3.1** Night interval: `0` — Off (day settings all the time), `1` — On  

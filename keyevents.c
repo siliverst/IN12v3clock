@@ -10,9 +10,11 @@
 #include "effects.h"
 
 /*
-longpress_keyX		-	in keyivents_counters
-fastrelease_keyX 	-	in processing of button release
-ivent_single_keyX - this is what the button does in longpress or fastrelease
+Key events (keyboard.c gives the debounced press and release events):
+event_single_keyX	- the action of a click, called by the press (setup modes) or by the release (time display, menu K2)
+longpress_keyX		- the hold actions and the key repeat, called every 100ms from keyevents_counters()
+fastReleaseKeyX		- the release of a short press
+A key bit is cleared in ki.bf to ignore its release after a hold action.
 */
 
 void event_single_key1(void);
@@ -25,7 +27,7 @@ void fastReleaseKey1(void);
 static void fxSelect(uint8_t kind, uint8_t addr, uint8_t max);
 
 
-Keyivents ki;
+Keyevents ki;
 
 void keyevents_proc ( void )
 {
@@ -196,9 +198,6 @@ void event_single_key2(void)
 	uint8_t s = i.display_state;
 	
 	switch (s){
-		case SETUP_NO:
-			break;
-		
 		case SETUP_HOURS:
 			i.display_state = SETUP_MINUTES;
 			break;

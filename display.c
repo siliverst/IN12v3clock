@@ -7,7 +7,7 @@
 #include <string.h>
 
 /*
-Digits PWM: the 595 chain is reloaded up to 3 times per TIM2 period (100Hz, 1us ticks):
+Digits PWM: the 595 chain is reloaded up to 3 times per TIM2 period (10000 ticks, 100/200/400Hz, see displaySetPwm()):
 by update with the "on" frame, by CC1 (at t1) and CC3 (at t2 >= t1) with the frames of the digits still on.
 A digit has its on time: full bright digits - all the period, dim digits - dimLevel, others - bright0.
 t1, t2 are the two on times of the normal and dim digits, CC3 is used only for the dim digits (flip fade effect).
@@ -21,7 +21,7 @@ static volatile uint8_t front;										// bank used by ISR
 static uint8_t	digits[NIXIE_COUNT];							// last shown digits, NIXIE_OFF - blank
 static uint8_t	fullMask;													// digits at full brightness
 static uint8_t	dimMask;													// digits with dimLevel brightness
-static uint16_t	dimLevel;													// on time of the dim digits, us
+static uint16_t	dimLevel;													// on time of the dim digits, timer ticks
 static uint8_t	bright0;													// current digits brightness, %
 static uint8_t	pwmDiv = 1;												// TIM2 periods in 10ms
 static uint8_t	dotPulseCounter;
@@ -38,14 +38,14 @@ void displayInit ( void )
 	sfr_PORTD.CR2.C26  = 1;     // input: 0=no exint, 1=exint; output: 0=2MHz slope, 1=10MHz slope
 	DOT_PIN = 0;
 	
-	// configure TIM2 with 100Hz frequency, count to 10000;
+	// configure TIM2: 100Hz at start (1MHz, 10000 ticks), then displaySetPwm()
   sfr_TIM2.CR1.ARPE = 1;								// use buffered period register to avoid glitches
   sfr_TIM2.PSCR.PSC = 4;								// set TIM2 prescaler fTim = fcpu/2^pre with pre in [0..15], see displaySetPwm()
   sfr_TIM2.ARRH.byte = hibyte(10000);		// set reload period = (ARR+1)/fTim
   sfr_TIM2.ARRL.byte = lobyte(10000);
 	sfr_TIM2.CCMR1.OC1PE 	= 1;						// buffer compare registers to avoid glitches when changing duty cycle:
 	sfr_TIM2.CCMR2.OC2PE 	= 1;						// main writes them just after update, a new value below the counter is missed
-	sfr_TIM2.CCMR3.OC3PE 	= 1;
+	sfr_TIM2.CCMR3.OC3PE 	= 1;									// (CC3: the dim digits)
 	sfr_TIM2.IER.UIE 			= 1;						// TIM2 update interrupt enable
 	sfr_TIM2.CR1.CEN     	= 1;						// start TIM2
 	
@@ -136,7 +136,7 @@ uint8_t displayGetBright(void)
 	return bright0;
 }
 
-// digits from mask are shown with the on time level, us (0..10000), mask 0 - off
+// digits from mask are shown with the on time level, timer ticks (0..10000), mask 0 - off
 void displayDim(uint8_t mask, uint16_t level)
 {
 	dimMask = mask;
@@ -144,9 +144,9 @@ void displayDim(uint8_t mask, uint16_t level)
 	displayRender();
 }
 
-/*input: 
-uint8_t data[4] -> {minutes,tens of minutes,hours,tens of hours}, NIXIE_OFF - blank
-full_bright_bitmask -> digits shown at 100% (and at brightness 0)
+/*
+data[4] -> {minutes, tens of minutes, hours, tens of hours}, NIXIE_OFF - blank
+full_bright_bitmask -> digits shown at 100% (also at the brightness 0)
 */
 void displayNixie(uint8_t *data, uint8_t full_bright_bitmask)
 {
@@ -163,7 +163,7 @@ the shifting was handled after it: the short pulses were all the same, the low p
 */
 static void displayDotLevel (uint16_t level)
 {
-	uint16_t c = (level / 100) * bright0 + (level % 100) * bright0 / 100;	// pulse, us
+	uint16_t c = (level / 100) * bright0 + (level % 100) * bright0 / 100;	// pulse, timer ticks
 	
 	if (c == 0) {
 		sfr_TIM2.IER.CC2IE 		= 0;						// TIM2 channel 2 compare interrupt disable
