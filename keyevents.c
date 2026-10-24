@@ -7,6 +7,7 @@
 #include "ds3231.h"
 #include "eeprom.h"
 #include "rgb.h"
+#include "effects.h"
 
 /*
 longpress_keyX		-	in keyivents_counters
@@ -89,6 +90,11 @@ void keyevents_counters ( void )
 			ki.kr_counter[t]=0;
 		}
 	}
+	// no 2nd click (the key is up): single click
+	if (ki.click1 && !bitchk(ki.bf,S1) && !--ki.click1){
+		EEPROM_set(FLIP_ADDR, (e.flip < FLIP_MAX) ? e.flip + 1 : 0);
+		fxDemo(FX_FLIP_DEMO);
+	}
 	if (i.timeSetupCounter){
 		i.timeSetupCounter--;
 		if (!i.timeSetupCounter){
@@ -108,7 +114,14 @@ void event_single_key1(void)
 	
 	switch(s){
 		case SETUP_NO:
-			apStart();
+			// single click: the next minute change effect, double click: the next antipoisoning effect
+			if (ki.click1){
+				ki.click1 = 0;
+				EEPROM_set(AP_TYPE_ADDR, (e.apType < AP_TYPE_MAX) ? e.apType + 1 : 0);
+				fxDemo(FX_AP_DEMO);
+			}else{
+				ki.click1 = CLICK2_TICKS;
+			}
 			break;
 		
 		case SETUP_HOURS:
@@ -220,6 +233,7 @@ void longpress_key1(void)
 			if (ki.lp_counter[S1] >= 2*10){
 				i.display_state = SETUP_HOURS;
 				i.timeSetupCounter = 60*10;
+				ki.click1 = 0;
 				i.hoursSetupValue = i.hours;
 				i.minutesSetupValue = i.minutes;
 				iface_show(100, IFACE_RGB_KEEP);
@@ -259,6 +273,7 @@ void longpress_key2(void)
 void longpress_key1_2(void){
 	if ((ki.lp_counter[S1] >= 2*10)&&(ki.lp_counter[S2] >= 2*10)){
 		if (i.display_state == SETUP_NO){
+			ki.click1 = 0;
 			i.display_state = SETUP_ZERO;
 			i.setupValue = e.zeroEn;
 			i.timeSetupCounter = 60*10;

@@ -16,6 +16,8 @@ extern volatile uint8_t flag10ms;	// set by TIM2 every 10ms
 
 void displayInit ( void );
 void displaySetBright(uint8_t bright);
+void displayDim(uint8_t mask, uint16_t level);
+uint8_t displayGetBright(void);
 void displayNixie(uint8_t *data, uint8_t full_bright_bitmask);
 void displayDot (uint8_t bright);
 void displayDotPulse (uint8_t odd);

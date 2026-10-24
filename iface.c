@@ -6,6 +6,7 @@
 #include "macro.h"
 #include "eeprom.h"
 #include "rgb.h"
+#include "effects.h"
 #include <string.h>
 
 Iface i;
@@ -15,9 +16,6 @@ static void iface_disp2decDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 static void iface_disp3decDigit (uint16_t value, uint8_t *d0, uint8_t *d1, uint8_t *d2);
 static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
-static void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours);
-static void apProc (void);
-static uint8_t apInWork (void);
 
 static uint16_t nowMinutes;		// current time, minutes from midnight
 static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtoggle()
@@ -26,18 +24,6 @@ static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtogg
 static uint8_t brightNow, brightTarget, rgbNow, rgbTarget;
 static uint8_t rgbFast;								// backlight fade: 1 - fast (K2) till the target, 0 - as the digits (day/night)
 
-/*
-Antipoisoning: every digit rolls down from the shown digit to the time digit through all 10 cathodes.
-All digits make the same number of steps (9 or 10), so they finish one after another, as they start:
-  - the time digit is skipped on the way and is shown at the last step;
-  - old != new: the 8 other digits + new = 9 steps (3 -> 2 1 0 9 8 7 6 4 5);
-  - old == new: the 9 other digits + new = 10 steps (7 -> 6 5 4 3 2 1 0 9 8 7).
-The time digit is taken at every step, so the end is right if the minute changes during the run.
-*/
-#define AP_DELAY	2										// 100ms ticks between the starts of the digits
-static uint8_t apDig[NIXIE_COUNT];		// digits shown by antipoisoning
-static uint8_t apSteps[NIXIE_COUNT];	// steps left
-static uint8_t apTick;								// 100ms ticks from the start
 
 void iface_init( void )
 {
@@ -67,7 +53,6 @@ void iface_100ms_proc (void)
 	//counter for blinking digits while RGB setup
 	i.flag100ms ^= 1;
 	
-	apProc();
 	keyevents_counters();
 	iface_display();
 }
@@ -148,54 +133,8 @@ void iface_50ms_proc (void)
 }
 
 
-/*
-start from the digits on the tubes (a blank tube starts from its target digit),
-a blank leading zero rolls to 0 and is blanked after the end
-*/
-void apStart (void)
-{
-	uint8_t d, t[NIXIE_COUNT];
-	
-	iface_time_digits(t, i.minutes, i.hours);
-	for (d = 0; d < NIXIE_COUNT; d++){
-		if (t[d] > 9) {t[d] = 0;}																// blank leading zero rolls to 0
-		apDig[d] = (i.display[d] < 10) ? i.display[d] : t[d];		// blank tube starts from its digit
-		apSteps[d] = (apDig[d] == t[d]) ? 10 : 9;
-	}
-	apTick = 0;
-}
-
-static uint8_t apInWork (void)
-{
-	return apSteps[0] | apSteps[1] | apSteps[2] | apSteps[3];
-}
-
-// every 100ms, the rolling digits are at full brightness
-static void apProc (void)
-{
-	uint8_t d, n, mask = 0;
-	uint8_t t[NIXIE_COUNT];
-	
-	if (!apInWork()) {return;}
-	iface_time_digits(t, i.minutes, i.hours);
-	for (d = 0; d < NIXIE_COUNT; d++){
-		if (apSteps[d] && (apTick >= d * AP_DELAY)){
-			n = (t[d] > 9) ? 0 : t[d];
-			if (--apSteps[d]){
-				apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;
-				if (apDig[d] == n) {apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;}
-				mask |= (uint8_t)(1 << d);
-			}else{
-				apDig[d] = n;
-			}
-		}
-	}
-	apTick++;
-	displayNixie(apDig, mask);
-}
-
 // time digits (BCD time) by the time format and the leading zero setting
-static void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours)
+void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours)
 {
 	uint8_t h = bcd_to_decimal(hours);
 	
@@ -279,18 +218,13 @@ static void iface_display(void)
 						interval = 1;
 #endif
 						if (interval && (nowMinutes % interval == 0)){
-							apStart();
+							fxApStart();
 						}
 					}
 					minutesLast = i.minutes;
 				}
 			}
-			
-			if (!apInWork()){
-				iface_time_digits(i.display, i.minutes, i.hours);
-				displayNixie(i.display, 0);
-			}
-			break;
+			break;				// the digits are shown by fx_10ms()
 		
 		case SETUP_HOURS:
 		case SETUP_MINUTES:

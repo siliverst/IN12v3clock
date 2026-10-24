@@ -4,6 +4,7 @@
 #include "keyboard.h"
 #include "keyevents.h"
 #include "iface.h"
+#include "effects.h"
 
 /*
 all periodic tasks, called from the main loop.
@@ -20,6 +21,7 @@ void service_timing_proc (void)
 	flag10ms = 0;
 	
 	if (i.display_state == SETUP_NO) {displayDotPulseProc();}		// setup modes drive the dot themselves
+	fx_10ms();
 	if (++counter20ms >= 2){
 		counter20ms = 0;
 		keyboard_refresh();

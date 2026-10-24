@@ -21,7 +21,10 @@ enum eeprom_adreses{
 	NIGHT_END_M_ADDR,
 	AP_DAY_ADDR,							// antipoisoning interval, day, minutes, 0 - off
 	AP_NIGHT_ADDR,						// antipoisoning interval, night, minutes, 0 - off
-	COLON_ADDR,								// colon type: 0 - pulse, 1 - on, 2 - off
+	COLON_ADDR,								// colon type: 0 - pulse, 1 - on, 2 - off, 3 - slow pulse, 4, 5 - blinking
+	FLIP_ADDR,								// minute change effect, 0 - none
+	AP_TYPE_ADDR,							// antipoisoning effect
+	GLITCH_ADDR,							// glitches on/off
 	RGB_DAY_EN_ADDR,					// backlight on/off (K2), day
 	RGB_NIGHT_EN_ADDR,				// backlight on/off (K2), night
 	R_ADDR,
@@ -31,7 +34,9 @@ enum eeprom_adreses{
 };
 
 #define EE_MAGIC_ADDR			EE_COUNT
-#define EE_MAGIC					0x5A		// change it when the layout is changed
+#define EE_MAGIC					0x5B		// change it when the layout is changed
+#define FLIP_MAX					5
+#define AP_TYPE_MAX				2
 #define AP_INTERVAL_MAX		30			// minutes
 #define BRIGHT_MIN				5				// %, minimal digits brightness (except 0 at night)
 
@@ -50,6 +55,9 @@ typedef struct {
 	uint8_t		apDay;
 	uint8_t		apNight;
 	uint8_t		colonBlinkingType;
+	uint8_t		flip;
+	uint8_t		apType;
+	uint8_t		glitchEn;
 	uint8_t		rgbDayEn;
 	uint8_t		rgbNightEn;
 	uint8_t		r;
