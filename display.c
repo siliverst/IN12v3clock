@@ -155,6 +155,12 @@ void displayDotPulseProc (void)
 			case 3:																		// 2s pulse: lights up in an even second, goes out in an odd one
 				displayDot(dotOdd ? 99 - c : c + 1);
 				break;
+			case 4:																		// 0.5s on, 0.5s off
+				displayDot(c < 50 ? 100 : 0);
+				break;
+			case 5:																		// 1s on, 1s off
+				displayDot(dotOdd ? 0 : 100);
+				break;
 			default:
 				displayDot(0);
 				break;

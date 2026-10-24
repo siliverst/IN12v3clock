@@ -24,11 +24,19 @@ static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtogg
 
 // smooth change of the brightness (day/night, K2): the shown values go to the targets by iface_fade()
 static uint8_t brightNow, brightTarget, rgbNow, rgbTarget;
+static uint8_t rgbFast;								// backlight fade: 1 - fast (K2) till the target, 0 - as the digits (day/night)
 
-// antipoisoning: every digit rolls down from the shown digit to the time digit through all 10 cathodes
+/*
+Antipoisoning: every digit rolls down from the shown digit to the time digit through all 10 cathodes.
+All digits make the same number of steps (9 or 10), so they finish one after another, as they start:
+  - the time digit is skipped on the way and is shown at the last step;
+  - old != new: the 8 other digits + new = 9 steps (3 -> 2 1 0 9 8 7 6 4 5);
+  - old == new: the 9 other digits + new = 10 steps (7 -> 6 5 4 3 2 1 0 9 8 7).
+The time digit is taken at every step, so the end is right if the minute changes during the run.
+*/
 #define AP_DELAY	2										// 100ms ticks between the starts of the digits
 static uint8_t apDig[NIXIE_COUNT];		// digits shown by antipoisoning
-static uint8_t apSteps[NIXIE_COUNT];	// steps left, 10..19 at start
+static uint8_t apSteps[NIXIE_COUNT];	// steps left
 static uint8_t apTick;								// 100ms ticks from the start
 
 void iface_init( void )
@@ -71,7 +79,7 @@ static uint8_t fade(uint8_t now, uint8_t target, uint8_t step)
 	return target;
 }
 
-// every 50ms: digits 1%, backlight 4% (perceptually linear), full scale in 5s / 1.25s
+// every 50ms: digits 1%, backlight 1% or 4% after K2 (perceptually linear), full scale in 5s / 1.25s
 static void iface_fade(void)
 {
 	uint8_t b = fade(brightNow, brightTarget, 1);
@@ -80,11 +88,12 @@ static void iface_fade(void)
 		brightNow = b;
 		displaySetBright(b);
 	}
-	b = fade(rgbNow, rgbTarget, 4);
+	b = fade(rgbNow, rgbTarget, rgbFast ? 4 : 1);
 	if ((b != rgbNow) && !rgbBlink){
 		rgbNow = b;
 		RGBset(b);
 	}
+	if (b == rgbTarget) {rgbFast = 0;}
 }
 
 // set the brightness at once (setup modes), rgb = IFACE_RGB_KEEP - do not change the backlight
@@ -98,6 +107,28 @@ void iface_show(uint8_t digits, uint8_t rgb)
 	}
 }
 
+#ifdef AP_TEST
+/*
+test firmware (python -I tools/build.py -DAP_TEST): the time runs 6 times faster from 09:57,
++1 minute every 10s, antipoisoning at every minute
+*/
+static uint8_t dec_to_bcd(uint8_t v)
+{
+	return (uint8_t)((v / 10) << 4) | (v % 10);
+}
+
+static void ap_test_time(void)
+{
+	static uint16_t m = 9*60 + 57;
+	static uint8_t sLast;
+	
+	if (((i.seconds & 0x0F) == 0) && (i.seconds != sLast)) {m = (m + 1) % (24*60);}
+	sLast = i.seconds;
+	i.minutes = dec_to_bcd(m % 60);
+	i.hours = dec_to_bcd(m / 60);
+}
+#endif
+
 // every 50ms: get time from ds3231 and start the dot pulse at a new second, smooth brightness change
 void iface_50ms_proc (void)
 {
@@ -106,6 +137,9 @@ void iface_50ms_proc (void)
 	if (i.display_state == SETUP_NO){
 		iface_fade();
 		ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
+#ifdef AP_TEST
+		ap_test_time();
+#endif
 		if (i.seconds != secondsLast){
 			secondsLast = i.seconds;
 			displayDotPulse(i.seconds & 1);			// BCD, bit 0 is the parity
@@ -124,9 +158,9 @@ void apStart (void)
 	
 	iface_time_digits(t, i.minutes, i.hours);
 	for (d = 0; d < NIXIE_COUNT; d++){
-		if (t[d] > 9) {t[d] = 0;}
-		apDig[d] = (i.display[d] < 10) ? i.display[d] : t[d];
-		apSteps[d] = 10 + (uint8_t)(apDig[d] + 10 - t[d]) % 10;
+		if (t[d] > 9) {t[d] = 0;}																// blank leading zero rolls to 0
+		apDig[d] = (i.display[d] < 10) ? i.display[d] : t[d];		// blank tube starts from its digit
+		apSteps[d] = (apDig[d] == t[d]) ? 10 : 9;
 	}
 	apTick = 0;
 }
@@ -139,14 +173,21 @@ static uint8_t apInWork (void)
 // every 100ms, the rolling digits are at full brightness
 static void apProc (void)
 {
-	uint8_t d, mask = 0;
+	uint8_t d, n, mask = 0;
+	uint8_t t[NIXIE_COUNT];
 	
 	if (!apInWork()) {return;}
+	iface_time_digits(t, i.minutes, i.hours);
 	for (d = 0; d < NIXIE_COUNT; d++){
 		if (apSteps[d] && (apTick >= d * AP_DELAY)){
-			apSteps[d]--;
-			apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;
-			if (apSteps[d]) {mask |= (uint8_t)(1 << d);}
+			n = (t[d] > 9) ? 0 : t[d];
+			if (--apSteps[d]){
+				apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;
+				if (apDig[d] == n) {apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;}
+				mask |= (uint8_t)(1 << d);
+			}else{
+				apDig[d] = n;
+			}
 		}
 	}
 	apTick++;
@@ -234,6 +275,9 @@ static void iface_display(void)
 					if (minutesLast != 0xff){		// not at start
 						// at night with digits off antipoisoning is not done, it disturbs people
 						interval = i.night ? (e.nBright ? e.apNight : 0) : e.apDay;
+#ifdef AP_TEST
+						interval = 1;
+#endif
 						if (interval && (nowMinutes % interval == 0)){
 							apStart();
 						}
@@ -353,5 +397,6 @@ void RGBtoggle ( void )
 		return;
 	}
 	EEPROM_set(a, !EE(a));
+	rgbFast = 1;
 	iface_apply_mode();
 }

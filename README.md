@@ -184,7 +184,7 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 
 ## **Basic Control:**
 1. **Single press of K1** — Executes the cathode poisoning prevention algorithm: every digit rolls down from the shown digit
-   to the current time through all 10 cathodes, the digits start one after another.
+   to the current time through all 10 cathodes (9–10 steps of 0.1 s), the digits start one after another.
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
    Day and night have their own on/off state and brightness (menu items 4 and 5).  
    If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
@@ -237,7 +237,7 @@ the clock starts at 00:00 — set the time again.
    - **K1:** Adjusts the parameter value.
    - **K2:** Saves the parameter and moves to the next menu item.
    
-   In the time display the brightness changes smoothly (day/night, K2): digits 1% and backlight 4% every 50 ms.
+   In the time display the brightness changes smoothly (day/night, K2): digits and backlight 1% every 50 ms, the backlight switched by K2 4% every 50 ms.
 4. ## Menu Items:  
 
     Items 0–9: the item number is in the left digit, the value in the three right digits.  
@@ -275,6 +275,8 @@ the clock starts at 00:00 — set the time again.
          `1` — Always on (at the digits brightness)  
          `2` — Always off  
          `3` — Slow pulse: lights up smoothly during one second, goes out during the next one  
+         `4` — Blinking: 0.5 s on, 0.5 s off  
+         `5` — Slow blinking: 1 s on, 1 s off  
     
 5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.  
    Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.
