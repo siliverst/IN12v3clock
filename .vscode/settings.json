@@ -1,0 +1,15 @@
+{
+	// Tools paths for the tasks (tasks.json). Empty - the default install paths:
+	//   Cosmic: C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8
+	//   SDCC:   C:\Program Files\SDCC\bin
+	//   STVP:   C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe
+	// Use / or \\ in the paths. The same can be set by the environment variables COSMIC_DIR, SDCC_DIR, STVP_CMDLINE.
+	"in12v3clock.cosmicDir": "",
+	"in12v3clock.sdccDir": "",
+	"in12v3clock.stvpCmdLine": "",
+
+	"files.associations": {"*.h": "c"},
+	"editor.insertSpaces": false,
+	"editor.tabSize": 2,
+	"files.exclude": {"**/*.o": true, "**/*.rel": true, "**/*.ls": true}
+}

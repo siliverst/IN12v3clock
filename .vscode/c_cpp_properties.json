@@ -1,0 +1,19 @@
+{
+	// IntelliSense only, the compiler is chosen in the build task (tasks.json).
+	// IntelliSense does not understand the Cosmic syntax (@far, @interrupt), so the code is parsed as SDCC:
+	// the Cosmic branches (#if defined(__CSMC__)) are shown as inactive, it is ok.
+	"configurations": [
+		{
+			"name": "STM8S003 (SDCC syntax)",
+			"includePath": ["${workspaceFolder}", "${workspaceFolder}/STM8_headers/include"],
+			"defines": [
+				"STM8S003", "__SDCC", "__SDCC_stm8", "__SDCC_VERSION_MAJOR=4", "__SDCC_VERSION_MINOR=5", "__SDCC_VERSION_PATCH=0",
+				"__interrupt(x)=", "__trap=", "__asm__(x)=", "__asm=", "__endasm="
+			],
+			"compilerPath": "",
+			"cStandard": "c99",
+			"intelliSenseMode": "gcc-x86"
+		}
+	],
+	"version": 4
+}

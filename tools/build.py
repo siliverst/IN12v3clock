@@ -12,8 +12,9 @@ sys.stdout.reconfigure(encoding="utf-8")
 PRJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(PRJ, "build")
 INC = os.path.join(PRJ, "STM8_headers", "include")
-COSMIC = os.environ.get("COSMIC_DIR", r"C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8")
-SDCC = os.environ.get("SDCC_DIR", r"C:\Program Files\SDCC\bin")
+# compiler paths: environment variables (an empty one is ignored), else the default install paths
+COSMIC = os.environ.get("COSMIC_DIR") or r"C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8"
+SDCC = os.environ.get("SDCC_DIR") or r"C:\Program Files\SDCC\bin"
 ROM_SIZE, RAM_SIZE = 8192, 1024
 SRCS = sorted(glob.glob(os.path.join(PRJ, "*.c")))
 DEFS = [a[2:] for a in sys.argv[1:] if a.startswith("-D")]

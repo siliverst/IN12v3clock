@@ -8,8 +8,9 @@ usage: python -I tools/flash.py [sdcc] [data]
 import os, subprocess, sys
 
 PRJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STVP = os.environ.get("STVP_CMDLINE",
-                      r"C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe")
+# environment variable (an empty one is ignored), else the default install path
+STVP = os.environ.get("STVP_CMDLINE") or \
+       r"C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe"
 
 prog = os.path.join(PRJ, "build", "sdcc", "main.s19") if "sdcc" in sys.argv else \
        os.path.join(PRJ, "build", "cosmic", "in12v3clock.s19")
@@ -25,6 +26,8 @@ areas = ["PROGRAM"] + (["DATA"] if "data" in sys.argv else [])
 # not loaded areas are verified against a blank image and always fail: ignore them
 lines = [l for l in out.splitlines()
          if any(l.startswith(("<<< Programming %s" % a, "<<< Verifying %s" % a)) for a in areas)]
-print(out if not lines else "\n".join(lines))
 ok = len(lines) == 2 * len(areas) and all(l.endswith("succeeds") for l in lines)
+if not ok:  # show the reason (e.g. "ERROR : Cannot communicate with the device !" - no connection or no power)
+    lines = [l for l in out.splitlines() if "ERROR" in l] + lines
+print(out if not lines else "\n".join(lines))
 sys.exit(0 if ok else 1)

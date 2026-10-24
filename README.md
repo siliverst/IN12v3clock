@@ -27,11 +27,35 @@ The STM8S003F3P6 microcontroller features 8 KB of Flash memory, 1 KB of RAM, and
 ---
 
 ## Requirements
-1. **Cosmic STM8 compiler** (CXSTM8, free license), with STVD or from the command line (`tools/build.py`).
-2. Alternative: the **SDCC compiler** (4.5 is tested; the binary is ~0.8 KB larger, about 800 bytes of 8 KB are left).
-3. **External Libraries**:
-- Added submodule: [STM8_headers](https://github.com/gicking/STM8_headers).
-  
+What to install (Windows):
+
+| Tool | Needed for | Where | Default path (used if no path is set) |
+|------|-----------|-------|----------------------------------------|
+| **Cosmic CXSTM8** (free license, registration) | build, the main compiler | [cosmicsoftware.com](https://www.cosmicsoftware.com/download_stm8_free.php) | `C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8` |
+| **SDCC** 4.x (4.5 is tested) | build, alternative (the binary is ~0.8 KB larger) | [sdcc.sourceforge.net](https://sdcc.sourceforge.net) | `C:\Program Files\SDCC\bin` |
+| **Python 3** | build and flash scripts in `tools/` | [python.org](https://www.python.org) | in `PATH` |
+| **ST Visual Programmer (STVP)** + ST-LINK driver | flashing (`STVP_CmdLine.exe`) | [st.com](https://www.st.com/en/development-tools/stvp-stm8.html) | `C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe` |
+| **VS Code** + C/C++ extension | editor (optional) | [code.visualstudio.com](https://code.visualstudio.com) | |
+
+Other paths are set in one of the ways (an empty value means the default path):
+- VS Code: `.vscode/settings.json`: `in12v3clock.cosmicDir`, `in12v3clock.sdccDir`, `in12v3clock.stvpCmdLine`;
+- command line: the environment variables `COSMIC_DIR`, `SDCC_DIR`, `STVP_CMDLINE`.
+
+External libraries: the submodule [STM8_headers](https://github.com/gicking/STM8_headers) (`git clone --recurse-submodules`).
+
+## Working in VS Code
+Open the project folder in VS Code (`File > Open Folder`). The tasks (`.vscode/tasks.json`):
+- **Ctrl+Shift+B** (task `Build`) — build, asks for the compiler: `cosmic`, `sdcc` or both. The errors go to the Problems panel.
+- `Terminal > Run Task...`:
+  - `Build Cosmic`, `Build SDCC` — build with one compiler without the question;
+  - `Flash` — flash through ST-LINK, asks: Cosmic or SDCC firmware, with or without the default EEPROM (the settings reset);
+  - `Build and flash Cosmic`;
+  - `Special build Cosmic` — test builds: `AP_TEST`, `DIAG_RESET`, `K1_DOUBLE_CLICK=0`;
+  - `Default EEPROM file` — regenerate the default EEPROM file after a change of the settings layout.
+- Output: `build/cosmic/in12v3clock.s19`, `build/sdcc/main.s19`; the build prints the ROM/RAM usage and fails if the firmware does not fit into 8 KB.
+
+The old STVD project (`in12v3clock.stp`) still works, but VS Code with the scripts is the main way now.
+
 ---
 
 ## Important Configuration
@@ -273,7 +297,7 @@ the clock starts at 00:00 — set the time again.
     **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
     **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
     **2.4** Backlight, night: `0–99%`  
-    **2.5** Digits PWM frequency: `0` — 100 Hz, `1` — 200 Hz (default), `2` — 400 Hz (experimental: at a low brightness some cathodes may not glow fully); shown at the night brightness to see the flicker  
+    **2.5** Digits PWM frequency: `0` — 100 Hz (default), `1` — 200 Hz, `2` — 400 Hz (experimental: at a low brightness some cathodes may not glow fully); shown at the night brightness to see the flicker  
 
     **3. Night**  
     **3.1** Night interval: `0` — Off (day settings all the time), `1` — On  
