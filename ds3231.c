@@ -6,14 +6,26 @@ static uint8_t ds3231_read(uint8_t reg, uint8_t *buf, uint8_t n);
 static void ds3231_write(uint8_t reg, uint8_t *buf, uint8_t n);
 
 /*
-the clock works in 24h format only: if the RTC is in 12h mode (set by another firmware),
-convert the hours register to 24h.
+- the oscillator must run on battery (EOSC = 0, it is 0 after power on, but could be set by another firmware);
+- if the oscillator was stopped (OSF, battery was empty or removed), the time is garbage: set 00:00:00;
+- the clock works in 24h format only: if the RTC is in 12h mode (set by another firmware),
+  convert the hours register to 24h.
 */
 void ds3231Init(void)
 {
 	uint8_t h, h12;
-
+	uint8_t cs[2];																			// control, status
+	
 	i2c_init();
+	if (ds3231_read(CONTROL_ADDR, cs, sizeof(cs)) && ((cs[0] & DS3231_EOSC) || (cs[1] & DS3231_OSF))){
+		if (cs[1] & DS3231_OSF){
+			h = 0;
+			ds3231_write_time(&h, &h, &h);
+		}
+		cs[0] &= ~DS3231_EOSC;
+		cs[1] &= ~DS3231_OSF;
+		ds3231_write(CONTROL_ADDR, cs, sizeof(cs));
+	}
 	if (ds3231_read(HOURS_ADDR, &h, 1) && (h & DS3231_12H)){
 		h12 = h & 0x1F;																		// BCD 1..12
 		if (h12 == 0x12) {h12 = 0;}
@@ -50,10 +62,7 @@ void ds3231_write_time(uint8_t *seconds, uint8_t *minutes, uint8_t *hours)
 // start and send the address of the chip and of the register, return ACK
 static uint8_t ds3231_select(uint8_t reg)
 {
-	if (i2c_busy_check() != OK){
-		i2c_slave_unlock();
-		return 0;
-	}
+	if (!i2c_bus_free()) {return 0;}
 	i2c_start();
 	i2c_shift(DS3231_ADDRESS);
 	if (i2c_ack(READ_ANSWER) != ACK) {return 0;}

@@ -206,6 +206,9 @@ Q7 -> 2003A U14 I5, O5-> N1 9
      - Holding K1 (> 0.8 seconds): Continuously increases the minute value.
    - **K2:** Saves the time (seconds reset to zero) and exits the setup mode.
 
+If the RTC battery was empty or removed while the clock was off (DS3231 oscillator stop flag),
+the clock starts at 00:00 — set the time again.
+
 ---
 
 ## **Backlight Color Adjustment Mode:**
