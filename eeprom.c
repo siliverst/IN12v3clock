@@ -1,108 +1,39 @@
 #include "STM8S003F3.h"
 #include "eeprom.h"
+#include "display.h"
 
 Edata e;
 
+// limits and defaults, in the order of enum eeprom_adreses
+const uint8_t eeMax[EE_COUNT] = {1, 1, 5, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, PWM_MAX, 1, 23, 59, 23, 59,
+                                 FLIP_MAX, AP_TYPE_MAX, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 1, 1, 1, 255, 255, 255};
+static const uint8_t eeDef[EE_COUNT] = {0, 0, 0, BRIGHT_MAX, 30, BRIGHT_MAX, 30, 0, 0, 22, 0, 7, 0, 0, 0, 10, 2, 0, 1, 0, 12, 5, 81};
+
+/*
+read all settings from EEPROM to e, wrong values are replaced by defaults.
+If the layout magic does not match (empty EEPROM or old layout), all settings are set to defaults.
+*/
 void EEPROM_dataInit(void)
 {
-	e.rgbGlobalEn = EEPROM_readByte(RGB_EN_ADDR);
-	if (e.rgbGlobalEn > 1) {
-		e.rgbGlobalEn = 0;
-		EEPROM_writeByte(RGB_EN_ADDR,e.rgbGlobalEn);
-	}
+	uint8_t a, v;
+	uint8_t reset = (EEPROM_readByte(EE_MAGIC_ADDR) != EE_MAGIC);
 	
-	e.zeroEn = EEPROM_readByte(ZERO_ADDR);
-	if (e.zeroEn > 1) {
-		e.zeroEn = 0;
-		EEPROM_writeByte(ZERO_ADDR,e.zeroEn);
-	}
-	
-	e.f1224 = EEPROM_readByte(F1224_ADDR);
-	if (e.f1224) {														//disable, 12h time display is not working yet!
-	//if (e.f1224 > 1) {
-		e.f1224 = 0;
-		EEPROM_writeByte(F1224_ADDR,e.f1224);
-	}
-	
-	e.bright = EEPROM_readByte(BRIGHT_ADDR);
-	if ((e.bright > 100)||(e.bright < 5)) {
-		e.bright = 100;
-		EEPROM_writeByte(BRIGHT_ADDR,e.bright);
-	}
-	
-	e.nBright = EEPROM_readByte(NIGHT_BR_ADDR);
-	if (e.nBright > 100) {
-		e.nBright = 100;
-		EEPROM_writeByte(NIGHT_BR_ADDR,e.nBright);
-	}
-	
-	e.nBrightEn = EEPROM_readByte(NIGHT_BR_EN_ADDR);
-	if (e.nBrightEn > 1) {
-		e.nBrightEn = 0;
-		EEPROM_writeByte(NIGHT_BR_EN_ADDR,e.nBrightEn);
-	}
-	
-	e.nBrightStartH = EEPROM_readByte(NIGHT_BR_START_H_ADDR);
-	if (e.f1224){
-		if (e.nBrightStartH > 12) {
-			e.nBrightStartH = 0;
-			EEPROM_writeByte(NIGHT_BR_START_H_ADDR,e.nBrightStartH);
+	for (a = 0; a < EE_COUNT; a++){
+		v = EEPROM_readByte(a);
+		if (reset || (v > eeMax[a]) || ((a == BRIGHT_ADDR) && (v < BRIGHT_MIN))){
+			v = eeDef[a];
+			EEPROM_writeByte(a, v);
 		}
-	}else{
-		if (e.nBrightStartH > 23) {
-			e.nBrightStartH = 0;
-			EEPROM_writeByte(NIGHT_BR_START_H_ADDR,e.nBrightStartH);
-		}
+		EE(a) = v;
 	}
-	
-	e.nBrightStartM = EEPROM_readByte(NIGHT_BR_START_M_ADDR);
-	if (e.nBrightStartM > 59) {
-		e.nBrightStartM = 0;
-		EEPROM_writeByte(NIGHT_BR_START_M_ADDR,e.nBrightStartM);
-	}
-	
-	e.nBrightEndH = EEPROM_readByte(NIGHT_BR_STOP_H_ADDR);
-	if (e.f1224){
-		if (e.nBrightEndH > 12) {
-			e.nBrightEndH = 0;
-			EEPROM_writeByte(NIGHT_BR_STOP_H_ADDR,e.nBrightEndH);
-		}
-	}else{
-		if (e.nBrightEndH > 23) {
-			e.nBrightEndH = 0;
-			EEPROM_writeByte(NIGHT_BR_STOP_H_ADDR,e.nBrightEndH);
-		}
-	}
-	
-	e.nBrightEndM = EEPROM_readByte(NIGHT_BR_STOP_M_ADDR);
-	if (e.nBrightEndM > 59) {
-		e.nBrightEndM = 0;
-		EEPROM_writeByte(NIGHT_BR_STOP_M_ADDR,e.nBrightEndM);
-	}
-	
-	e.rgbAtNightEn = EEPROM_readByte(NIGHT_RGB_EN_ADDR);
-	if (e.rgbAtNightEn > 1){
-		e.rgbAtNightEn = 0;
-		EEPROM_writeByte(NIGHT_RGB_EN_ADDR,e.rgbAtNightEn);
-	}
-	
-	e.antipoisoningAtNihgtOnly = EEPROM_readByte(ANTIPOISONING_AT_NIGHT_ONLY_ADDR);
-	if (e.antipoisoningAtNihgtOnly > 1){
-		e.antipoisoningAtNihgtOnly = 0;
-		EEPROM_writeByte(ANTIPOISONING_AT_NIGHT_ONLY_ADDR,e.antipoisoningAtNihgtOnly);
-	}
-	
-	e.antipoisoningEffect = EEPROM_readByte(ANTIPOISONING_EFFECT_ADDR);
-	if (e.antipoisoningEffect!= 1) {
-		e.antipoisoningEffect = 1;	// todo temporally it's only 1
-		EEPROM_writeByte(ANTIPOISONING_EFFECT_ADDR, e.antipoisoningEffect);
-	}
+	EEPROM_writeByte(EE_MAGIC_ADDR, EE_MAGIC);
+}
 
-	e.colonBlinkingType = EEPROM_readByte(COLON_BLINKING_TYPE);
-	if (e.colonBlinkingType > 2){
-		e.colonBlinkingType = 0;
-		EEPROM_writeByte(COLON_BLINKING_TYPE,e.colonBlinkingType);
-	}
+// set the field of e and save it to EEPROM
+void EEPROM_set(uint8_t addr, uint8_t data)
+{
+	EE(addr) = data;
+	EEPROM_writeByte(addr, data);
 }
 
 /**
@@ -120,14 +51,18 @@ void EEPROM_dataInit(void)
 uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
 
   uint16_t   addr = EEPROM_ADDR_START + logAddr;  // physical address 
-  uint8_t    countTimeout;                        // timeout counter
+  uint16_t   countTimeout;                        // timeout counter
   
   // address range check
-  if (logAddr > EEPROM_SIZE)
+  if (logAddr >= EEPROM_SIZE)
     return(0);
   
-  // begin critical cection (disable interrupts)
-  DISABLE_INTERRUPTS();
+  // the same value is already there, do not wear EEPROM
+  if (*((uint8_t*) addr) == data)
+    return(1);
+  
+  // interrupts are not touched: the unlock does not need it, and at start they must stay disabled
+  displayWaitLongPhase();
   
   // unlock w/e access to EEPROM
   sfr_FLASH.DUKR.byte = 0xAE;
@@ -139,16 +74,13 @@ uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
   // write byte in 16-bit address range
   *((uint8_t*) addr) = data;
 
-  // wait until done or timeout (normal flash write measured with 0 --> 100 is more than sufficient)
-  countTimeout = 100;                                // ~0.95us/inc -> ~0.1ms
+  // wait until done or timeout: the byte write takes up to 6ms (with erase), the loop is ~0.5us
+  countTimeout = 20000;
   while ((!sfr_FLASH.IAPSR.EOP) && (countTimeout--));
     
   // lock EEPROM again against accidental erase/write
   sfr_FLASH.IAPSR.DUL = 0;
   
-  // critical section (enable interrupts)
-  ENABLE_INTERRUPTS();
-
   // write successful -> return 1
   return(countTimeout != 0);
 
@@ -171,7 +103,7 @@ uint8_t EEPROM_readByte(uint16_t logAddr) {
   uint16_t   addr = EEPROM_ADDR_START + logAddr;  // physical address 
   
   // address range check
-  if (logAddr > EEPROM_SIZE)
+  if (logAddr >= EEPROM_SIZE)
     return(0xFF);
   
   // return read data

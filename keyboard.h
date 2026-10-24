@@ -16,7 +16,6 @@ typedef struct
 {
 	uint8_t S1_reg;
 	uint8_t S2_reg;
-	uint8_t Refresh;
 	uint8_t HeadPtr,TailPtr;
 	uint8_t Buffer[8];
 }Keyboard; 

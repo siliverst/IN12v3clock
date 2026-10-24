@@ -7,9 +7,7 @@ extern "C" {
 
 void RGBinit ( void );
 
-void RGBsetR ( uint16_t value );
-void RGBsetG ( uint16_t value );
-void RGBsetB ( uint16_t value );
+void RGBset ( uint8_t bright );
 
 #ifdef	__cplusplus
 }

@@ -1,63 +1,38 @@
 #include "STM8S003F3.h"
 #include "service_timing.h"
 #include "display.h"
-#include "ds3231.h"
 #include "keyboard.h"
 #include "keyevents.h"
-#include "macro.h"
 #include "iface.h"
+#include "effects.h"
 
-extern volatile uint8_t flag10ms;
-static uint8_t mutex = 0;
-
-static void timer20msProc(void);
-
-void service_timing_init (void)
-{
-	
-}
-
-void set_service_timing_mutex (void)
-{
-	mutex = 1;
-}
-
-void reset_service_timing_mutex (void)
-{
-	mutex = 0;
-}
-
-void service_timing_10ms_proc (void) 
-{
-	static uint8_t quere10ms = 0;
-	
-	if (flag10ms){
-		if(!mutex){
-			quere10ms++;
-			
-			switch(quere10ms){
-				case 1:	displayDotPulseProc(); 	break;
-				case 2: iface_10ms_proc_en();		break;
-				case 3: timer20msProc(); 
-					flag10ms = 0;
-					quere10ms = 0;
-					break;
-					
-				default:
-					flag10ms = 0;
-					quere10ms = 0;
-				break;
-			}
-		}
-	}
-}
-
-static void timer20msProc(void)
+/*
+all periodic tasks, called from the main loop.
+flag10ms is set by the display timer (TIM2 update, 100Hz). If the loop is late
+for more than 10ms (EEPROM write), the tick is lost, the clock itself is in the RTC.
+*/
+void service_timing_proc (void)
 {
 	static uint8_t counter20ms;
-	if (++counter20ms > (2-1)){
+	static uint8_t counter50ms;
+	static uint8_t counter100ms;
+	
+	if (!flag10ms) {return;}
+	flag10ms = 0;
+	
+	if ((i.display_state == SETUP_NO) || (i.display_state == SETUP_COLON)) {displayDotPulseProc();}	// setup modes drive the dot themselves
+	fx_10ms();
+	if (++counter20ms >= 2){
 		counter20ms = 0;
-		
 		keyboard_refresh();
+	}
+	keyevents_proc();
+	if (++counter50ms >= 5){
+		counter50ms = 0;
+		iface_50ms_proc();
+	}
+	if (++counter100ms >= 10){
+		counter100ms = 0;
+		iface_100ms_proc();
 	}
 }

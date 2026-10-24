@@ -6,21 +6,28 @@ extern "C" {
 #endif
 
 #include "display.h"
-#define AP_CYCLES	2
+#include "eeprom.h"
 
+// settings menu steps are the EEPROM addresses (the night start and end are 2 steps each)
 enum setup_states{
-	SETUP_ZERO,
-	SETUP_F1224,
-	SETUP_BRIGHT,
-	SETUP_NIGHT_BR,
-	SETUP_NIGHT_BR_EN,
-	SETUP_NIGHT_BR_START_H,
-	SETUP_NIGHT_BR_START_M,
-	SETUP_NIGHT_BR_END_H,
-	SETUP_NIGHT_BR_END_M,
-	SETUP_NIGHT_RGB_EN,
-	SETUP_ANTIPOISONING_AT_NIGHT_ONLY,
-	SETUP_COLON_BLINKING_TYPE,
+	SETUP_ZERO						= ZERO_ADDR,
+	SETUP_F1224						= F1224_ADDR,
+	SETUP_COLON						= COLON_ADDR,
+	SETUP_BRIGHT					= BRIGHT_ADDR,
+	SETUP_NIGHT_BR				= NIGHT_BR_ADDR,
+	SETUP_RGB_BR					= RGB_BR_ADDR,
+	SETUP_RGB_NIGHT_BR		= RGB_NIGHT_BR_ADDR,
+	SETUP_PWM							= PWM_ADDR,
+	SETUP_NIGHT_EN				= NIGHT_EN_ADDR,
+	SETUP_NIGHT_START_H		= NIGHT_START_H_ADDR,
+	SETUP_NIGHT_START_M		= NIGHT_START_M_ADDR,
+	SETUP_NIGHT_END_H			= NIGHT_END_H_ADDR,
+	SETUP_NIGHT_END_M			= NIGHT_END_M_ADDR,
+	SETUP_FLIP						= FLIP_ADDR,
+	SETUP_AP_TYPE					= AP_TYPE_ADDR,
+	SETUP_AP_DAY					= AP_DAY_ADDR,
+	SETUP_AP_NIGHT				= AP_NIGHT_ADDR,
+	SETUP_GLITCH					= GLITCH_ADDR,
 	SETUP_R,
 	SETUP_G,
 	SETUP_B,
@@ -28,47 +35,44 @@ enum setup_states{
 	SETUP_MINUTES,
 	SETUP_NO = 255
 };
+#define SETUP_MENU_LAST		SETUP_GLITCH
 
 typedef struct  
 {
 	uint16_t 	timeSetupCounter;
 	uint8_t		display[NIXIE_COUNT];
-	uint8_t		flag10ms;
 	uint8_t		display_state;
 	uint8_t		seconds;
 	uint8_t		minutes;
 	uint8_t		hours;
-	uint8_t		setupValue;
+	uint8_t		menuIntro;					// 100ms ticks: the item number is shown before the night time
 	uint8_t 	minutesSetupValue;
 	uint8_t 	hoursSetupValue;
 	uint8_t 	counter1s;
 	uint8_t		flag05s;
 	uint8_t		flag100ms;
+	uint8_t		night;							// 1 - night interval is active now
 }Iface;
 
-typedef struct
-{
-	uint8_t digsOld[NIXIE_COUNT];
-	uint8_t digsNew[NIXIE_COUNT];
-	uint8_t digsCurrent[NIXIE_COUNT];
-	uint8_t digsCounter[NIXIE_COUNT];
-	uint8_t flagEn[NIXIE_COUNT];
-	uint8_t	en;
-	uint8_t counter;
-	uint8_t procCounter;
-}antipoisoning;
+extern Iface i;
+
 
 
 void iface_init( void );
-void iface_proc ( void ) ;
-void iface_10ms_proc_en (void);
+void iface_50ms_proc (void);
+void iface_100ms_proc (void);
 void iface_flag05sReset(void);
 uint8_t bcd_to_decimal(uint8_t bcd);
-uint8_t decimal_to_bcd(uint8_t decimal);
 uint16_t time_to_minutes(uint8_t hour, uint8_t minute);
 uint8_t is_time_in_interval(uint16_t current_minutes, uint16_t start_minutes, uint16_t end_minutes);
-void apStart (void);
+void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours);
 void RGBtoggle ( void );
+void iface_apply_mode (void);
+void iface_menu_preview (void);
+void iface_menu_next (void);
+#define IFACE_RGB_KEEP	255
+void iface_show(uint8_t digits, uint8_t rgb);
+void iface_exit_setup (void);
 
 #ifdef	__cplusplus
 }

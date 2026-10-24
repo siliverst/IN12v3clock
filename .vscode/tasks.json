@@ -1,0 +1,127 @@
+{
+	// Build and flash from VS Code: Ctrl+Shift+B - build (asks for the compiler),
+	// Terminal > Run Task... - all tasks. The tools paths: .vscode/settings.json (empty - default install paths).
+	"version": "2.0.0",
+	"options": {
+		"env": {
+			"COSMIC_DIR": "${config:in12v3clock.cosmicDir}",
+			"SDCC_DIR": "${config:in12v3clock.sdccDir}",
+			"STVP_CMDLINE": "${config:in12v3clock.stvpCmdLine}"
+		}
+	},
+	"inputs": [
+		{
+			"id": "compiler",
+			"type": "pickString",
+			"description": "Compiler",
+			"options": ["cosmic", "sdcc", "cosmic sdcc"],
+			"default": "cosmic"
+		},
+		{
+			"id": "flashWhat",
+			"type": "pickString",
+			"description": "What to flash (option bytes are never touched)",
+			"options": [
+				{"label": "Cosmic firmware", "value": ""},
+				{"label": "SDCC firmware", "value": "sdcc"},
+				{"label": "Cosmic firmware + default EEPROM (settings reset)", "value": "data"},
+				{"label": "SDCC firmware + default EEPROM (settings reset)", "value": "sdcc data"}
+			],
+			"default": ""
+		},
+		{
+			"id": "define",
+			"type": "pickString",
+			"description": "Special build (Cosmic)",
+			"options": [
+				{"label": "AP_TEST: the time runs 6 times faster, antipoisoning every minute", "value": "-DAP_TEST"},
+				{"label": "DIAG_RESET: the reset cause is shown at start", "value": "-DDIAG_RESET"},
+				{"label": "K1_DOUBLE_CLICK=0: no double click of K1", "value": "-DK1_DOUBLE_CLICK=0"}
+			]
+		}
+	],
+	"tasks": [
+		{
+			"label": "Build",
+			"type": "shell",
+			"command": "python -I tools/build.py ${input:compiler}",
+			"group": {"kind": "build", "isDefault": true},
+			"problemMatcher": [
+			{
+				"owner": "cosmic", "source": "cosmic", "fileLocation": ["autoDetect", "${workspaceFolder}"],
+				"pattern": {"regexp": "^#(error|warning) \\w+ (.+?):(\\d+)(?:\\((\\d+)[^)]*\\))? (.*)$",
+				            "severity": 1, "file": 2, "line": 3, "column": 4, "message": 5}
+			},
+			{
+				"owner": "sdcc", "source": "sdcc", "fileLocation": ["autoDetect", "${workspaceFolder}"], "severity": "error",
+				"pattern": {"regexp": "^(.+?):(\\d+):(?:(\\d+):)? *(?:(error|warning)(?: \\d+)?|syntax error): *(.*)$",
+				            "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5}
+			}
+		],
+			"presentation": {"clear": true}
+		},
+		{
+			"label": "Build Cosmic",
+			"type": "shell",
+			"command": "python -I tools/build.py cosmic",
+			"group": "build",
+			"problemMatcher": [
+			{
+				"owner": "cosmic", "source": "cosmic", "fileLocation": ["autoDetect", "${workspaceFolder}"],
+				"pattern": {"regexp": "^#(error|warning) \\w+ (.+?):(\\d+)(?:\\((\\d+)[^)]*\\))? (.*)$",
+				            "severity": 1, "file": 2, "line": 3, "column": 4, "message": 5}
+			}
+		],
+			"presentation": {"clear": true}
+		},
+		{
+			"label": "Build SDCC",
+			"type": "shell",
+			"command": "python -I tools/build.py sdcc",
+			"group": "build",
+			"problemMatcher": [
+			{
+				"owner": "sdcc", "source": "sdcc", "fileLocation": ["autoDetect", "${workspaceFolder}"], "severity": "error",
+				"pattern": {"regexp": "^(.+?):(\\d+):(?:(\\d+):)? *(?:(error|warning)(?: \\d+)?|syntax error): *(.*)$",
+				            "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5}
+			}
+		],
+			"presentation": {"clear": true}
+		},
+		{
+			"label": "Flash",
+			"type": "shell",
+			"command": "python -I tools/flash.py ${input:flashWhat}",
+			"problemMatcher": [],
+			"presentation": {"clear": true}
+		},
+		{
+			"label": "Build and flash Cosmic",
+			"type": "shell",
+			"command": "python -I tools/flash.py",
+			"dependsOn": "Build Cosmic",
+			"problemMatcher": []
+		},
+		{
+			"label": "Special build Cosmic",
+			"type": "shell",
+			"command": "python -I tools/build.py cosmic ${input:define}",
+			"group": "build",
+			"problemMatcher": [
+			{
+				"owner": "cosmic", "source": "cosmic", "fileLocation": ["autoDetect", "${workspaceFolder}"],
+				"pattern": {"regexp": "^#(error|warning) \\w+ (.+?):(\\d+)(?:\\((\\d+)[^)]*\\))? (.*)$",
+				            "severity": 1, "file": 2, "line": 3, "column": 4, "message": 5}
+			}
+		],
+			"presentation": {"clear": true}
+		},
+		{
+			"label": "Default EEPROM file",
+			"detail": "regenerate in12v3clock_Programmer/in12v3clock_STVP_data.* from eeDef[] (after a change of the settings layout)",
+			"type": "shell",
+			"command": "python -I tools/eedata.py",
+			"problemMatcher": []
+		}
+	]
+}

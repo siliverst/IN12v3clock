@@ -7,7 +7,13 @@ extern "C" {
 
 
 // DS3231 I2C address
-#define DS3231_ADDRESS	0xD0	
+#define DS3231_ADDRESS	0xD0
+// hours register bits
+#define DS3231_12H			0x40
+#define DS3231_PM				0x20
+// control register: oscillator disabled on battery; status register: oscillator was stopped, time is lost
+#define DS3231_EOSC			0x80
+#define DS3231_OSF			0x80
 
 enum ds3231_reg_addresses{
 	SECONDS_ADDR,

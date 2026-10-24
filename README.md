@@ -4,6 +4,16 @@
 Alternate firmware for the GeekStyles IN12 V3 Nixie nixieclock PCB.
 
 ## Version
+- **2.00**: Rework of the firmware (branch `refactor`):
+  - day and night modes with smooth brightness change, separate digits and backlight brightness, the night digits can be off;
+  - perceptually linear backlight brightness (CIE lightness), backlight on/off by K2 for day and night separately;
+  - digits PWM 100/200/400 Hz with flicker free updates, fast 595 shift out (assembler);
+  - minute change effects (fade, roll, train, elastic), antipoisoning effects, glitches
+    (ideas from [NixieClock v2](https://github.com/AlexGyver/NixieClock_v2) by AlexGyver);
+  - 6 colon modes, leading zero, 12/24-hour format;
+  - settings menu by groups, the night start and end set as a time;
+  - DS3231: ~100 kHz I2C, the oscillator is enabled, the lost time (empty battery) is reset to 00:00;
+  - command line build and flashing (`tools/`), many bug fixes. Cosmic: ~6.6 KB of 8 KB.
 - **1.00**: Initial release.
 
 ## Description
@@ -17,16 +27,51 @@ The STM8S003F3P6 microcontroller features 8 KB of Flash memory, 1 KB of RAM, and
 ---
 
 ## Requirements
-1. **Cosmic STM8 compiller + STVD**
-2. Alternate is the **SDCC compiller** (the binary file is slightly larger compared to COSMIC).
-3. **External Libraries**:
-- Added submodule: [STM8_headers](https://github.com/gicking/STM8_headers).
-  
----
+What to install (Windows):
 
-## Important Configuration
-Before flashing the firmware, set the option byte `AFR0` in the ST Visual Programmer:
-- **Port C5, C6 & C7**: Configure to **Alternate Function**.
+| Tool | Needed for | Where | Default path (used if no path is set) |
+|------|-----------|-------|----------------------------------------|
+| **Cosmic CXSTM8** (free license, registration) | build, the main compiler | [cosmicsoftware.com](https://www.cosmicsoftware.com/download_stm8_free.php) | `C:\Program Files (x86)\COSMIC\FSE_Compilers\CXSTM8` |
+| **SDCC** 4.x (4.5 is tested) | build, alternative (the binary is ~0.8 KB larger) | [sdcc.sourceforge.net](https://sdcc.sourceforge.net) | `C:\Program Files\SDCC\bin` |
+| **Python 3** | build and flash scripts in `tools/` | [python.org](https://www.python.org) | in `PATH` |
+| **ST Visual Programmer (STVP)** + ST-LINK driver | flashing (`STVP_CmdLine.exe`) | [st.com](https://www.st.com/en/development-tools/stvp-stm8.html) | `C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe` |
+| **VS Code** + C/C++ extension | editor (optional) | [code.visualstudio.com](https://code.visualstudio.com) | |
+
+Other paths are set in one of the ways (an empty value means the default path):
+- VS Code: `.vscode/settings.json`: `in12v3clock.cosmicDir`, `in12v3clock.sdccDir`, `in12v3clock.stvpCmdLine`;
+- command line: the environment variables `COSMIC_DIR`, `SDCC_DIR`, `STVP_CMDLINE`.
+
+External libraries: the submodule [STM8_headers](https://github.com/gicking/STM8_headers) (`git clone --recurse-submodules`).
+
+## Working in VS Code
+1. Install the tools from the table above. If a tool is not in its default path, set the path in `.vscode/settings.json`.
+2. Open the project folder: `File > Open Folder`. VS Code offers the recommended extensions (C/C++, Python), install them.
+3. **Build:** `Ctrl+Shift+B`, choose the compiler (`cosmic`, `sdcc` or both). The terminal at the bottom shows the result:
+   `COSMIC: ROM 6611 / 8192 (1581 free) ...`. The errors are in the Problems panel (`Ctrl+Shift+M`), a click opens the line.
+4. **Other tasks** (flashing etc.): `Terminal > Run Task...` (or `Ctrl+Shift+P` > `Tasks: Run Task`), choose the task:
+
+   | Task | What it does |
+   |------|--------------|
+   | `Build` | build, asks for the compiler (the same as `Ctrl+Shift+B`) |
+   | `Build Cosmic`, `Build SDCC` | build with one compiler, no question |
+   | `Flash` | flash through ST-LINK, asks: Cosmic or SDCC firmware, with or without the default EEPROM (the settings reset). Option bytes are not touched |
+   | `Build and flash Cosmic` | build and flash at once — the usual one |
+   | `Special build Cosmic` | test builds: `AP_TEST` (the time runs 6 times faster, antipoisoning every minute), `DIAG_RESET` (the reset cause at start), `K1_DOUBLE_CLICK=0` |
+   | `Default EEPROM file` | regenerate the default EEPROM file after a change of the settings layout |
+
+5. **Flashing:** connect the ST-LINK to the debug connector, power the clock, run `Flash` or `Build and flash Cosmic`.
+   Success is two lines in the terminal:
+   ```
+   <<< Programming PROGRAM MEMORY succeeds
+   <<< Verifying PROGRAM MEMORY succeeds
+   ```
+   `ERROR : Cannot communicate with the device` — the ST-LINK is not connected or the clock has no power.
+   The option byte `AFR0` must be set once (see [Flashing](#flashing)), the scripts do not touch the option bytes.
+6. **Repeat the last task:** `Ctrl+Shift+P` > `Tasks: Rerun Last Task`. A key can be assigned to it:
+   `File > Preferences > Keyboard Shortcuts`, search `Rerun Last Task`.
+- Output files: `build/cosmic/in12v3clock.s19`, `build/sdcc/main.s19`. The build fails if the firmware does not fit into 8 KB.
+
+The old STVD project (`in12v3clock.stp`) still works, but VS Code with the scripts is the main way now.
 
 ---
 
@@ -139,28 +184,81 @@ Q7 -> 2003A U14 I5, O5-> N1 9
    ```
 
  **When using COSMIC:**
- - Compile the firmware using Cosmic STM8 v4.6 toolchain. 
+ - Compile the firmware using Cosmic STM8 v4.6 toolchain (STVD project `in12v3clock.stp`, configuration Release).
  - Or use precompiled firmware file: `Release\in12v3clock.s19` 
 
  **When using SDCC:**
- - Install Docker.
- - Open Windows Terminal.
- - Run the `run.cmd` file.
- - Run command `make clean` in the terminal window.
- - Run command `make` in the terminal window.
+ - Windows: VS Code task `Build SDCC` or `python tools/build.py sdcc` (see below).
+ - Linux / macOS: install `sdcc` (4.5 is tested, older versions may not fit into 8 KB), `make`, `binutils`, then in the project folder:
+   - `make` — build to `build/sdcc/main.ihx` and `main.s19`, `make clean` — remove the build;
+   - `make flash` — flash through ST-LINK V2 with [stm8flash](https://github.com/vdudouyt/stm8flash) (option bytes and EEPROM are not touched).
  - Or use the precompiled files (`main.s19` or `main.ihx`) located in the `SDCC` directory.
-2. Flash the firmware to the STM8S003F3P6 microcontroller.
-- The `in12v3clock_Programmer` directory contains a project for the STVP programmer with a default EEPROM file and a default OPTION BYTE file.
 
- - SWD pinout:
- 
- ![SWD pinout](Photo/swd_pinout.jpg)
-
-
- Here you can find the pinout of your ST-Link programmer:  
- [Wiki: ST-Link Pinout](https://wiki.cuvoodoo.info/doku.php?id=jtag)
-
+ **Command line build on Windows (no STVD):**
+ - Requires Python 3 and installed Cosmic CXSTM8 and/or SDCC (default install paths, or set `COSMIC_DIR` / `SDCC_DIR`).
+ - `python tools/build.py` builds with both compilers, `python tools/build.py cosmic` or `... sdcc` builds with one.
+ - Results go to `build/cosmic/in12v3clock.s19` and `build/sdcc/main.s19`; the script prints ROM/RAM usage and fails if the firmware does not fit into 8 KB.
+ - Note: in the STVD Release configuration the Cosmic optimizer is enabled (option `-no` removed), it saves about 540 bytes.
+ - Build options: `python tools/build.py cosmic -DK1_DOUBLE_CLICK=0` (no double click of K1), `-DDIAG_RESET`
+   (shows the reset cause at start), `-DAP_TEST` (test: the time runs 6 times faster, antipoisoning every minute).
+ - `python tools/eedata.py` regenerates the default EEPROM file from the sources (after a change of the settings layout).
+ - `python tools/flash.py [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file.
+2. Flash the firmware, see [Flashing](#flashing).
 3. Verify the board's functionality.
+
+## Flashing
+The STM8S003F3 has no UART bootloader, it is flashed only through **SWIM** with an **ST-LINK V2** (an original or a cheap clone).
+
+**Connection** — the debug connector of the board (see [Debug Connector](#debug-connector)):
+- ST-LINK `SWIM` -> pin 2, `RST` -> pin 3, `GND` -> pin 4;
+- power the clock from its own power supply. Pin 1 (3.3V): an original ST-LINK only measures the target voltage there,
+  a clone outputs 3.3V — with the clock powered by its supply it is safer not to connect it.
+
+![SWD pinout](Photo/swd_pinout.jpg)
+
+The pinout of your ST-LINK: [Wiki: ST-Link Pinout](https://wiki.cuvoodoo.info/doku.php?id=jtag)
+
+**Option byte `AFR0` (once for a new chip):** the backlight green channel is TIM1_CH1 on PC6, it is available only
+with the alternate function remapping `AFR0` (Port C5, C6, C7 — alternate function). Without it the green LEDs do not work.
+The file `in12v3clock_Programmer/in12v3clock_STVP_OPTION BYTE.hex` has this setting, the scripts below never write the option bytes.
+
+**Files:**
+- firmware: `Release/in12v3clock.s19` (precompiled, Cosmic) or your build `build/cosmic/in12v3clock.s19`;
+  SDCC: `SDCC/main.s19` / `build/sdcc/main.s19`;
+- default settings (EEPROM): `in12v3clock_Programmer/in12v3clock_STVP_data.s19` (`.hex`). Not needed: the firmware writes
+  the default settings itself if the EEPROM is empty or has an old layout.
+
+### Windows: ST Visual Programmer (STVP), GUI
+Install [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) (it also installs the ST-LINK driver).
+1. Open the project `in12v3clock_Programmer/in12v3clock_STVP.stp` (`File > Open Project`). It is set for ST-LINK, SWIM,
+   STM8S003F3 and loads the files: PROGRAM MEMORY — `Release/in12v3clock.s19`, DATA MEMORY — the default settings,
+   OPTION BYTE — `AFR0`. If a file is not found, load it by `File > Open...` on its tab.
+   Without the project: `Configure > Configure ST Visual Programmer`: Hardware `ST-LINK`, Port `USB`, Programming mode `SWIM`,
+   Device `STM8S003F3`; then load the files on the tabs.
+2. A new chip: tab **OPTION BYTE**, check that `AFR0` is `Port C5... Alternate Active`, then `Program > Current tab`.
+3. Tab **PROGRAM MEMORY**: `Program > Current tab` (Ctrl+P). The verify runs after the programming.
+4. Tab **DATA MEMORY** (optional, resets the settings to the defaults): `Program > Current tab`.
+
+`Program > All tabs` writes all three at once (the settings are reset).
+
+### Windows: command line or VS Code
+`python tools/flash.py [sdcc] [data]` or the VS Code task `Flash` (see [Working in VS Code](#working-in-vs-code)).
+It uses `STVP_CmdLine.exe` from STVP, writes the program memory (and the default EEPROM with `data`), verifies it,
+never touches the option bytes. Set `AFR0` once with the STVP GUI.
+
+### Linux / macOS: stm8flash
+[stm8flash](https://github.com/vdudouyt/stm8flash) works with ST-LINK V2 (on Linux add the udev rule from its README
+or run with `sudo`):
+```bash
+make flash                                                   # build/sdcc/main.ihx, the same as:
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w build/sdcc/main.ihx
+stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w Release/in12v3clock.s19          # the precompiled Cosmic firmware
+stm8flash -c stlinkv2 -p stm8s003f3 -s eeprom -w in12v3clock_Programmer/in12v3clock_STVP_data.hex   # settings reset (optional)
+# option bytes, once for a new chip: OPT0..NOPT5 with AFR0 = 1 (OPT2 = 0x01, NOPT2 = 0xFE)
+printf '\x00\x00\xff\x01\xfe\x00\xff\x00\xff\x00\xff' > opt.bin
+stm8flash -c stlinkv2 -p stm8s003f3 -s opt -w opt.bin
+```
+The stm8flash commands are not tested by the author on this board (the Windows way is).
 
 ---
 
@@ -176,9 +274,14 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ---
 
 ## **Basic Control:**
-1. **Single press of K1** — Executes the cathode poisoning prevention algorithm.
-2. **Single press of K2** — Toggles the RGB lamp backlight.  
-   - In night mode, toggles the backlight for night operation.
+1. **Single press of K1** — Shows the number of the current minute change effect (menu item 4.1) in the left tube.
+   Press again while the number is shown to switch to the next effect. 1.5 s after the last press the time appears with this effect.
+   **Double press of K1** — The same for the cathode poisoning prevention effect (menu item 4.2), the number is in the right tube.
+   The single press reacts 0.4 s after the release (waiting for the second press). The double press can be switched off
+   in the firmware: `K1_DOUBLE_CLICK 0` in `keyevents.h` (then the single press reacts at once).
+2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
+   Day and night have their own on/off state and brightness (menu items 2.3 and 2.4).  
+   If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
 3. **Hold K1 (> 2 seconds)** — Activates time setup mode.
 4. **Hold K2 (> 2 seconds)** — Activates backlight color adjustment mode.
 5. **Hold K1 and K2 simultaneously (> 2 seconds)** — Activates the settings menu.
@@ -198,6 +301,11 @@ Q7 -> 2003A U14 I5, O5-> N1 9
      - Holding K1 (> 0.8 seconds): Continuously increases the minute value.
    - **K2:** Saves the time (seconds reset to zero) and exits the setup mode.
 
+In the 12-hour format the hours are set as 12, 1…11 (AM, the colon is on), then 12, 1…11 (PM, the colon blinks fast).
+
+If the RTC battery was empty or removed while the clock was off (DS3231 oscillator stop flag),
+the clock starts at 00:00 — set the time again.
+
 ---
 
 ## **Backlight Color Adjustment Mode:**
@@ -216,54 +324,55 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 
 ## **Settings Menu:**
 1. **Entering the menu:** Hold K1 and K2 simultaneously for more than 2 seconds.
-2. **Display behavior:**
-   - **Tens of hours digit:** Displays the menu item number.
-   - **Other digits:** Show the parameter value.
+2. **Display:** the item number "group item" in the two left tubes (at full brightness), the colon, the value in the two right tubes.
+   The night start and end: the item number for 0.8 s, then the time `HH:MM`, the edited part blinks.
 3. **Control:**
-   - **K1:** Adjusts the parameter value.
-   - **K2:** Saves the parameter and moves to the next menu item.
+   - **K1:** Changes the value (hold for auto repeat for the values above 9).
+   - **K2 (short):** Saves the item and moves to the next one, after the last one — exit.
+   - **K2 (hold 1 s):** Saves the item and exits the menu.
+   - Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.
+
+   In the time display the brightness changes smoothly (day/night, K2): digits and backlight 1% every 50 ms, the backlight switched by K2 4% every 50 ms.
 4. ## Menu Items:  
 
-    **0.** **Leading zero display:**  
-         `0` — Disabled  
-         `1` — Enabled  
+    **1. Display**  
+    **1.1** Leading zero of the hours: `0` — blank (` 7:05`), `1` — shown (`07:05`)  
+    **1.2** Time format: `0` — 24-hour, `1` — 12-hour (no AM/PM on the time display; in the time setup PM is shown by the fast blinking colon; the night interval is always in 24-hour format)  
+    **1.3** Colon (shown while the item is selected):  
+         `0` — Pulse every second  
+         `1` — Always on (at the digits brightness)  
+         `2` — Always off  
+         `3` — Slow pulse: lights up smoothly (0.5 s), stays on (0.5 s), goes out smoothly (0.5 s), stays off (0.5 s)  
+         `4` — Blinking: 0.5 s on, 0.5 s off  
+         `5` — Slow blinking: 1 s on, 1 s off  
 
-    **1.** **Time format:**  
-         `0` — 24-hour  
-         `1` — 12-hour  
+    **2. Brightness** (counts down 99 → 0 and shows the brightness being set; `99` is the full brightness, 100%)  
+    **2.1** Digits, day: `5–99%`  
+    **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
+    **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
+    **2.4** Backlight, night: `0–99%`  
+    **2.5** Digits PWM frequency: `0` — 100 Hz (default), `1` — 200 Hz, `2` — 400 Hz (experimental: at a low brightness some cathodes may not glow fully); shown at the night brightness to see the flicker  
 
-    **2.** **Normal mode indicator brightness:**  
-         `5%–100%`  
+    **3. Night**  
+    **3.1** Night interval: `0` — Off (day settings all the time), `1` — On  
+    **3.2** Night start `HH:MM` (24-hour)  
+    **3.3** Night end `HH:MM`  
 
-    **3.** **Night mode indicator brightness:**  
-         `5%–100%`  
-
-    **4.** **Night brightness enable:**  
-         `0` — Disabled  
-         `1` — Enabled  
-
-    **5.** **Night interval start hour.**  
-
-    **6.** **Night interval start minute.**  
-
-    **7.** **Night interval end hour.**  
-
-    **8.** **Night interval end minute.**  
-
-    **9.** **RGB backlight in night mode:**  
-         `0` — Disabled  
-         `1` — Enabled  
-
-    **10.** **Cathode poisoning prevention in night mode:**  
-         `0` — Every 6 minutes during normal operation  
-         `1` — Every 2 minutes (only at night)  
-
-    **11.** **Colon blinking type:**  
-         `0` — Default blinking  
-         `1` — Colon always on  
-         `2` — Colon always off  
-    
-5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.
+    **4. Effects**  
+    **4.1** Minute change effect (only the changed digits, except train and elastic):  
+         `0` — None  
+         `1` — Fade out and in  
+         `2` — Roll down by numbers  
+         `3` — Roll through the cathodes in their order in the tube (front to back)  
+         `4` — Train: the digits go out to the right, the new ones come from the left  
+         `5` — Elastic: the digits fly out to the right one by one, the new ones fly in  
+    **4.2** Cathode poisoning prevention effect (every digit goes through all 10 cathodes):  
+         `0` — Wave: the digits roll down one after another from the shown digits to the time  
+         `1` — Wave through the cathodes in their order in the tube  
+         `2` — Noise: all digits roll fast together (0.5 s)  
+    **4.3** Cathode poisoning prevention interval, day: `0` — Off, `1–30` minutes  
+    **4.4** Cathode poisoning prevention interval, night: `0` — Off, `1–30` minutes (not done if the night digits brightness is 0)  
+    **4.5** Glitches: `0` — Off, `1` — On (every 30–120 s a random tube flickers a few times)  
 
 </details>
 

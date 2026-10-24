@@ -26,7 +26,6 @@ void keyboard_init(void)
 	kbd.S2_reg = 0xFE;
 	kbd.HeadPtr = 0;
 	kbd.TailPtr = 0;
-	kbd.Refresh = 0;
 }
 
 void keyboard_refresh( void )

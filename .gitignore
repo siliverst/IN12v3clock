@@ -7,3 +7,4 @@
 !/SDCC/*.s19
 !/SDCC/*.ihx
 /.idea
+/build/
