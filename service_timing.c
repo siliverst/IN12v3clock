@@ -20,7 +20,7 @@ void service_timing_proc (void)
 	if (!flag10ms) {return;}
 	flag10ms = 0;
 	
-	if (i.display_state == SETUP_NO) {displayDotPulseProc();}		// setup modes drive the dot themselves
+	if ((i.display_state == SETUP_NO) || (i.display_state == SETUP_COLON)) {displayDotPulseProc();}	// setup modes drive the dot themselves
 	fx_10ms();
 	if (++counter20ms >= 2){
 		counter20ms = 0;

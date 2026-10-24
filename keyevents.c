@@ -110,7 +110,7 @@ void keyevents_counters ( void )
 void event_single_key1(void)
 {
 	uint8_t s = i.display_state;
-	uint8_t v = i.setupValue;
+	uint8_t v;
 	
 	switch(s){
 		case SETUP_NO:
@@ -150,21 +150,23 @@ void event_single_key1(void)
 		case SETUP_NIGHT_BR:
 		case SETUP_RGB_BR:
 		case SETUP_RGB_NIGHT_BR:
-			// brightness goes down: 100..0 (digits: 100..5 day, 100..5,0 night) and again from 100
-			if (--v > 100){
-				v = 100;
+			// brightness goes down: 99..0 (digits: 99..5 day, 99..5,0 night) and again from 99
+			v = EE(s);
+			if (--v > BRIGHT_MAX){
+				v = BRIGHT_MAX;
 			}else if ((v < BRIGHT_MIN) && (s <= SETUP_NIGHT_BR)){
-				v = (s == SETUP_NIGHT_BR) ? 0 : 100;
+				v = (s == SETUP_NIGHT_BR) ? 0 : BRIGHT_MAX;
 			}
-			i.setupValue = v;
+			EE(s) = v;
 			iface_menu_preview();
 			break;
 		
 		default:
 			// other settings menu items: 0..max
 			if (s <= SETUP_MENU_LAST){
-				if (++v > eeMax[s]) {v = 0;}
-				i.setupValue = v;
+				if (++EE(s) > eeMax[s]) {EE(s) = 0;}
+				i.menuIntro = 0;
+				iface_flag05sReset();						// the night time: the edited part is visible while changing
 			}
 			break;
 	}
@@ -208,20 +210,7 @@ void event_single_key2(void)
 			break;
 		
 		default:
-			// settings menu: save the value and go to the next item
-			if (s > SETUP_MENU_LAST){
-				iface_exit_setup();
-				break;
-			}
-			EEPROM_set(s, i.setupValue);
-			if (s == SETUP_MENU_LAST){
-				iface_exit_setup();
-				bitmaskclr(ki.bf,S2_M);	//disable fast release key2 to prevent toggle RGB
-			}else{
-				i.display_state = ++s;
-				i.setupValue = EE(s);
-				iface_menu_preview();
-			}
+			// settings menu: by the release (short - next item) or by the hold (save and exit)
 			break;
 	}
 }
@@ -266,6 +255,13 @@ void longpress_key2(void)
 				iface_show(100, 100);
 				bitmaskclr(ki.bf,S2_M);
 			}
+		}else if (i.display_state <= SETUP_MENU_LAST){
+			// settings menu: hold K2 for 1s - save the item and exit
+			if (ki.lp_counter[S2] >= 1*10){
+				EEPROM_set(i.display_state, EE(i.display_state));
+				iface_exit_setup();
+				bitmaskclr(ki.bf,S2_M);
+			}
 		}
 	}
 }
@@ -275,7 +271,7 @@ void longpress_key1_2(void){
 		if (i.display_state == SETUP_NO){
 			ki.click1 = 0;
 			i.display_state = SETUP_ZERO;
-			i.setupValue = e.zeroEn;
+			i.menuIntro = 0;
 			i.timeSetupCounter = 60*10;
 			iface_menu_preview();
 		}
@@ -300,6 +296,8 @@ void fastReleaseKey2(void)
 		if (ki.lp_counter[S2] < 1*10){
 			if (i.display_state == SETUP_NO){
 				RGBtoggle();
+			}else if (i.display_state <= SETUP_MENU_LAST){
+				iface_menu_next();
 			}
 		}
 	}

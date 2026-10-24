@@ -8,10 +8,11 @@ extern "C" {
 #include "display.h"
 #include "eeprom.h"
 
-// settings menu items are the EEPROM addresses
+// settings menu steps are the EEPROM addresses (the night start and end are 2 steps each)
 enum setup_states{
 	SETUP_ZERO						= ZERO_ADDR,
 	SETUP_F1224						= F1224_ADDR,
+	SETUP_COLON						= COLON_ADDR,
 	SETUP_BRIGHT					= BRIGHT_ADDR,
 	SETUP_NIGHT_BR				= NIGHT_BR_ADDR,
 	SETUP_RGB_BR					= RGB_BR_ADDR,
@@ -21,11 +22,10 @@ enum setup_states{
 	SETUP_NIGHT_START_M		= NIGHT_START_M_ADDR,
 	SETUP_NIGHT_END_H			= NIGHT_END_H_ADDR,
 	SETUP_NIGHT_END_M			= NIGHT_END_M_ADDR,
-	SETUP_AP_DAY					= AP_DAY_ADDR,
-	SETUP_AP_NIGHT				= AP_NIGHT_ADDR,
-	SETUP_COLON						= COLON_ADDR,
 	SETUP_FLIP						= FLIP_ADDR,
 	SETUP_AP_TYPE					= AP_TYPE_ADDR,
+	SETUP_AP_DAY					= AP_DAY_ADDR,
+	SETUP_AP_NIGHT				= AP_NIGHT_ADDR,
 	SETUP_GLITCH					= GLITCH_ADDR,
 	SETUP_R,
 	SETUP_G,
@@ -44,7 +44,7 @@ typedef struct
 	uint8_t		seconds;
 	uint8_t		minutes;
 	uint8_t		hours;
-	uint8_t		setupValue;
+	uint8_t		menuIntro;					// 100ms ticks: the item number is shown before the night time
 	uint8_t 	minutesSetupValue;
 	uint8_t 	hoursSetupValue;
 	uint8_t 	counter1s;
@@ -68,6 +68,7 @@ void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours);
 void RGBtoggle ( void );
 void iface_apply_mode (void);
 void iface_menu_preview (void);
+void iface_menu_next (void);
 #define IFACE_RGB_KEEP	255
 void iface_show(uint8_t digits, uint8_t rgb);
 void iface_exit_setup (void);

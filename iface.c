@@ -17,6 +17,11 @@ static void iface_disp3decDigit (uint16_t value, uint8_t *d0, uint8_t *d1, uint8
 static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
 
+// settings menu: the item number "group item" of every step (BCD)
+static const uint8_t menuNum[SETUP_MENU_LAST + 1] = {0x11, 0x12, 0x13, 0x21, 0x22, 0x23, 0x24, 0x31, 0x32, 0x32, 0x33, 0x33,
+                                                     0x41, 0x42, 0x43, 0x44, 0x45};
+static uint8_t dotOdd;					// colon preview in the menu
+
 static uint16_t nowMinutes;		// current time, minutes from midnight
 static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtoggle()
 
@@ -49,6 +54,7 @@ void iface_100ms_proc (void)
 		i.counter1s = 0;
 	}
 	i.flag05s = (i.counter1s > 4);
+	if (i.menuIntro) {i.menuIntro--;}
 	
 	//counter for blinking digits while RGB setup
 	i.flag100ms ^= 1;
@@ -175,8 +181,27 @@ void iface_menu_preview (void)
 {
 	uint8_t s = i.display_state;
 	
-	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? i.setupValue : 100,
-	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? i.setupValue : 0);
+	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? EE(s) : 100,
+	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? EE(s) : 0);
+}
+
+/*
+settings menu, K2: save the item and go to the next one, after the last one - exit.
+The values are changed in e (for the preview), they are saved here or reloaded from EEPROM on exit.
+*/
+void iface_menu_next (void)
+{
+	uint8_t s = i.display_state;
+
+	EEPROM_set(s, EE(s));
+	if (s == SETUP_MENU_LAST){
+		iface_exit_setup();
+		return;
+	}
+	i.display_state = ++s;
+	i.menuIntro = ((s == SETUP_NIGHT_START_H) || (s == SETUP_NIGHT_END_H)) ? 8 : 0;
+	i.timeSetupCounter = 60*10;
+	iface_menu_preview();
 }
 
 /*
@@ -197,7 +222,7 @@ static void iface_display(void)
 	static uint8_t minutesLast = 0xff;
 	uint8_t interval;
 	uint8_t s = i.display_state;
-	uint8_t v = i.setupValue;
+	uint8_t v, a;
 	
 	switch(s){
 		case SETUP_NO:
@@ -257,19 +282,40 @@ static void iface_display(void)
 			break;
 		
 		default:
-			// settings menu: item number in the left digits (at full brightness), value in the right ones
+			/*
+			settings menu: the item number "group item" in the left tubes at full brightness, the colon, the value.
+			The night start and end: the item number for 0.8s, then the time HH:MM, the edited part blinks.
+			*/
 			if (s > SETUP_MENU_LAST) {break;}
-			i.display[0] = v % 10;
-			i.display[1] = (eeMax[s] > 9) ? (v / 10) % 10 : NIXIE_OFF;
-			i.display[2] = (v > 99) ? v / 100 : NIXIE_OFF;
-			if (s > 9){
-				iface_disp2decDigit(s, &i.display[2], &i.display[3]);
-				displayNixie(&i.display[0],bin(00001100));
+			if ((s >= SETUP_NIGHT_START_H) && (s <= SETUP_NIGHT_END_M) && !i.menuIntro){
+				a = (s <= SETUP_NIGHT_START_M) ? NIGHT_START_H_ADDR : NIGHT_END_H_ADDR;
+				iface_disp2decDigit(EE(a + 1), &i.display[0], &i.display[1]);
+				iface_disp2decDigit(EE(a), &i.display[2], &i.display[3]);
+				if (i.flag05s){
+					a = (s == a) ? 2 : 0;
+					i.display[a] = NIXIE_OFF;
+					i.display[a + 1] = NIXIE_OFF;
+				}
+				v = 0;
 			}else{
-				i.display[3] = s;
-				displayNixie(&i.display[0],bin(00001000));
+				v = EE(s);
+				i.display[0] = v % 10;
+				i.display[1] = (eeMax[s] > 9) ? v / 10 : NIXIE_OFF;
+				if (i.menuIntro){
+					i.display[0] = NIXIE_OFF;
+					i.display[1] = NIXIE_OFF;
+				}
+				i.display[2] = menuNum[s] & 0x0F;
+				i.display[3] = menuNum[s] >> 4;
+				v = bin(00001100);
 			}
-			displayDot(0);
+			displayNixie(i.display, v);
+			if (s != SETUP_COLON){
+				displayDot(100);
+			}else if (!i.counter1s){
+				dotOdd ^= 1;
+				displayDotPulse(dotOdd);				// preview of the colon mode
+			}
 			break;
 	}
 }

@@ -5,9 +5,9 @@
 Edata e;
 
 // limits and defaults, in the order of enum eeprom_adreses
-const uint8_t eeMax[EE_COUNT] = {1, 1, 100, 100, 100, 100, 1, 23, 59, 23, 59, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 5,
-                                 FLIP_MAX, AP_TYPE_MAX, 1, 1, 1, 255, 255, 255};
-static const uint8_t eeDef[EE_COUNT] = {0, 0, 100, 30, 100, 30, 0, 22, 0, 7, 0, 10, 2, 0, 0, 0, 0, 1, 0, 12, 5, 81};
+const uint8_t eeMax[EE_COUNT] = {1, 1, 5, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, 1, 23, 59, 23, 59,
+                                 FLIP_MAX, AP_TYPE_MAX, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 1, 1, 1, 255, 255, 255};
+static const uint8_t eeDef[EE_COUNT] = {0, 0, 0, BRIGHT_MAX, 30, BRIGHT_MAX, 30, 0, 22, 0, 7, 0, 0, 0, 10, 2, 0, 1, 0, 12, 5, 81};
 
 /*
 read all settings from EEPROM to e, wrong values are replaced by defaults.
@@ -16,19 +16,7 @@ If the layout magic does not match (empty EEPROM or old layout), all settings ar
 void EEPROM_dataInit(void)
 {
 	uint8_t a, v;
-	uint8_t reset;
-	
-	// layout 0x5A (magic at 19) had no effect items: move the items after COLON up, the new ones get defaults
-	if ((EEPROM_readByte(EE_MAGIC_ADDR) != EE_MAGIC) && (EEPROM_readByte(19) == 0x5A)){
-		for (a = EE_COUNT - 1; a > GLITCH_ADDR; a--){
-			EEPROM_writeByte(a, EEPROM_readByte(a - 3));
-		}
-		for (a = FLIP_ADDR; a <= GLITCH_ADDR; a++){
-			EEPROM_writeByte(a, eeDef[a]);
-		}
-		EEPROM_writeByte(EE_MAGIC_ADDR, EE_MAGIC);
-	}
-	reset = (EEPROM_readByte(EE_MAGIC_ADDR) != EE_MAGIC);
+	uint8_t reset = (EEPROM_readByte(EE_MAGIC_ADDR) != EE_MAGIC);
 	
 	for (a = 0; a < EE_COUNT; a++){
 		v = EEPROM_readByte(a);

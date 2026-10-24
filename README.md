@@ -183,13 +183,13 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ---
 
 ## **Basic Control:**
-1. **Single press of K1** — Switches to the next minute change effect (menu item 14): its number is shown in the left tube,
+1. **Single press of K1** — Switches to the next minute change effect (menu item 4.1): its number is shown in the left tube,
    1.5 s after the last press the time appears with this effect.
-   **Double press of K1** — Switches to the next cathode poisoning prevention effect (menu item 15), its number is shown
+   **Double press of K1** — Switches to the next cathode poisoning prevention effect (menu item 4.2), its number is shown
    in the right tube, then it runs the same way. Press again during the 1.5 s to go on without the demo.
    The single press reacts 0.4 s after the release (waiting for the second press).
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
-   Day and night have their own on/off state and brightness (menu items 4 and 5).  
+   Day and night have their own on/off state and brightness (menu items 2.3 and 2.4).  
    If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
 3. **Hold K1 (> 2 seconds)** — Activates time setup mode.
 4. **Hold K2 (> 2 seconds)** — Activates backlight color adjustment mode.
@@ -233,47 +233,21 @@ the clock starts at 00:00 — set the time again.
 
 ## **Settings Menu:**
 1. **Entering the menu:** Hold K1 and K2 simultaneously for more than 2 seconds.
-2. **Display behavior:**
-   - **Tens of hours digit:** Displays the menu item number.
-   - **Other digits:** Show the parameter value.
+2. **Display:** the item number "group item" in the two left tubes (at full brightness), the colon, the value in the two right tubes.
+   The night start and end: the item number for 0.8 s, then the time `HH:MM`, the edited part blinks.
 3. **Control:**
-   - **K1:** Adjusts the parameter value.
-   - **K2:** Saves the parameter and moves to the next menu item.
-   
+   - **K1:** Changes the value (hold for auto repeat for the values above 9).
+   - **K2 (short):** Saves the item and moves to the next one, after the last one — exit.
+   - **K2 (hold 1 s):** Saves the item and exits the menu.
+   - Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.
+
    In the time display the brightness changes smoothly (day/night, K2): digits and backlight 1% every 50 ms, the backlight switched by K2 4% every 50 ms.
 4. ## Menu Items:  
 
-    Items 0–9: the item number is in the left digit, the value in the three right digits.  
-    Items 10–16: the item number is in the two left digits, the value in the two right digits.  
-    Brightness items count down (100 → 0) and show the brightness being set.
-
-    **0.** **Leading zero of the hours:** `0` — blank (` 7:05`), `1` — shown (`07:05`)  
-
-    **1.** **Time format:** `0` — 24-hour, `1` — 12-hour (no AM/PM indication on the time display; in the time setup PM is shown by the fast blinking colon; the night interval is always in 24-hour format)  
-
-    **2.** **Day digits brightness:** `5%–100%`  
-
-    **3.** **Night digits brightness:** `0%, 5%–100%` (`0` — digits and colon are off at night)  
-
-    **4.** **Day backlight brightness:** `0%–100%`, perceptually linear (CIE lightness)  
-
-    **5.** **Night backlight brightness:** `0%–100%`  
-
-    **6.** **Night interval enable:** `0` — Disabled (day settings all the time), `1` — Enabled  
-
-    **7.** **Night interval start hour.**  
-
-    **8.** **Night interval start minute.**  
-
-    **9.** **Night interval end hour.**  
-
-    **10.** **Night interval end minute.**  
-
-    **11.** **Cathode poisoning prevention interval, day:** `0` — Off, `1–30` minutes  
-
-    **12.** **Cathode poisoning prevention interval, night:** `0` — Off, `1–30` minutes (not done if the night digits brightness is 0)  
-
-    **13.** **Colon type:**  
+    **1. Display**  
+    **1.1** Leading zero of the hours: `0` — blank (` 7:05`), `1` — shown (`07:05`)  
+    **1.2** Time format: `0` — 24-hour, `1` — 12-hour (no AM/PM on the time display; in the time setup PM is shown by the fast blinking colon; the night interval is always in 24-hour format)  
+    **1.3** Colon (shown while the item is selected):  
          `0` — Pulse every second  
          `1` — Always on (at the digits brightness)  
          `2` — Always off  
@@ -281,23 +255,32 @@ the clock starts at 00:00 — set the time again.
          `4` — Blinking: 0.5 s on, 0.5 s off  
          `5` — Slow blinking: 1 s on, 1 s off  
 
-    **14.** **Minute change effect** (only the changed digits, except train and elastic):  
+    **2. Brightness** (counts down 99 → 0 and shows the brightness being set)  
+    **2.1** Digits, day: `5–99%`  
+    **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
+    **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
+    **2.4** Backlight, night: `0–99%`  
+
+    **3. Night**  
+    **3.1** Night interval: `0` — Off (day settings all the time), `1` — On  
+    **3.2** Night start `HH:MM` (24-hour)  
+    **3.3** Night end `HH:MM`  
+
+    **4. Effects**  
+    **4.1** Minute change effect (only the changed digits, except train and elastic):  
          `0` — None  
          `1` — Fade out and in  
          `2` — Roll down by numbers  
          `3` — Roll through the cathodes in their order in the tube (front to back)  
          `4` — Train: the digits go out to the right, the new ones come from the left  
          `5` — Elastic: the digits fly out to the right one by one, the new ones fly in  
-
-    **15.** **Cathode poisoning prevention effect** (every digit goes through all 10 cathodes):  
+    **4.2** Cathode poisoning prevention effect (every digit goes through all 10 cathodes):  
          `0` — Wave: the digits roll down one after another from the shown digits to the time  
          `1` — Wave through the cathodes in their order in the tube  
          `2` — Noise: all digits roll fast together (0.5 s)  
-
-    **16.** **Glitches:** `0` — Off, `1` — On (every 30–120 s a random tube flickers a few times)  
-    
-5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.  
-   Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.
+    **4.3** Cathode poisoning prevention interval, day: `0` — Off, `1–30` minutes  
+    **4.4** Cathode poisoning prevention interval, night: `0` — Off, `1–30` minutes (not done if the night digits brightness is 0)  
+    **4.5** Glitches: `0` — Off, `1` — On (every 30–120 s a random tube flickers a few times)  
 
 </details>
 
