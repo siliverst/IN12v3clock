@@ -102,20 +102,30 @@ void displayNixie(uint8_t *data, uint8_t full_bright_bitmask)
 }
 
 /*
-bright -> 0-100% of the current digits brightness
+level -> 0..10000 (0.01% steps) of the current digits brightness.
+The dot is on at the end of the period: switched on by CC2, off by the update ISR before the 595 shifting,
+so even a short pulse is exact (it was switched on by the update ISR, and a compare inside the ~50us of
+the shifting was handled after it: the short pulses were all the same, the low part of a ramp jerked).
 */
-void displayDot (uint8_t bright)
+static void displayDotLevel (uint16_t level)
 {
-	uint16_t c = (uint16_t)bright * bright0;	// 100% * 100% = TIM2 period
+	uint16_t c = (level / 100) * bright0 + (level % 100) * bright0 / 100;	// pulse, us
 	
 	if (c == 0) {
 		sfr_TIM2.IER.CC2IE 		= 0;						// TIM2 channel 2 compare interrupt disable
 		DOT_PIN = 0;
 	}else {
+		c = 10000 - c;
 		sfr_TIM2.CCR2H.byte = hibyte(c);		// set PWM channel 2 duty period
 		sfr_TIM2.CCR2L.byte = lobyte(c);
 		sfr_TIM2.IER.CC2IE 		= 1;					// TIM2 channel 2 compare interrupt enable
 	}
+}
+
+// bright -> 0-100% of the current digits brightness
+void displayDot (uint8_t bright)
+{
+	displayDotLevel((uint16_t)bright * 100);
 }
 
 /*
@@ -155,7 +165,7 @@ void displayDotPulseProc (void)
 			case 3:																		// 2s: 0.5s lights up, 0.5s on, 0.5s goes out, 0.5s off
 				c = (c < 50) ? c * 2 + 2 : 100;					// 2..100, then hold
 				if (dotOdd) {c = 100 - c;}
-				displayDot((uint16_t)c * c / 100);		// square: the eye sees the low part of the ramp better
+				displayDotLevel((uint16_t)c * c);			// square: the eye sees the low part of the ramp better
 				break;
 			case 4:																		// 0.5s on, 0.5s off
 				displayDot(c < 50 ? 100 : 0);
@@ -173,10 +183,7 @@ void displayDotPulseProc (void)
 
 ISR_HANDLER (TIM2_UPD_ISR, _TIM2_OVR_UIF_VECTOR_)
 {
-	if (sfr_TIM2.IER.CC2IE)
-	{
-		DOT_PIN = 1;
-	}
+	DOT_PIN = 0;
 	hc595ChainShiftOut(frames[front], FRAME_SIZE);
 	flag10ms = 1;
 	sfr_TIM2.SR1.UIF = 0;
@@ -197,7 +204,9 @@ ISR_HANDLER (TIM2_CAP_ISR, _TIM2_CAPCOM_CC1IF_VECTOR_)
 	//for dot
 	if(sfr_TIM2.SR1.CC2IF)
 	{
-		DOT_PIN = 0;
+		if (sfr_TIM2.IER.CC2IE){
+			DOT_PIN = 1;
+		}
 		sfr_TIM2.SR1.CC2IF = 0;
 	}
   return;
