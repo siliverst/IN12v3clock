@@ -118,6 +118,11 @@ static void displayDotLevel (uint16_t level)
 		c = 10000 - c;
 		sfr_TIM2.CCR2H.byte = hibyte(c);		// set PWM channel 2 duty period
 		sfr_TIM2.CCR2L.byte = lobyte(c);
+		if (!sfr_TIM2.IER.CC2IE){
+			// CC2IF is set by every compare also when disabled: a stale flag would switch the dot on at once,
+			// for the rest of the period. Byte write: rc_w0 flags, the others are not touched
+			sfr_TIM2.SR1.byte = (uint8_t)~0x04;
+		}
 		sfr_TIM2.IER.CC2IE 		= 1;					// TIM2 channel 2 compare interrupt enable
 	}
 }
