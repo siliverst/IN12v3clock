@@ -8,3 +8,5 @@
 !/SDCC/*.ihx
 /.idea
 /build/
+/CLAUDE.md
+/PORTING.md

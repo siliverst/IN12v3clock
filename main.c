@@ -20,7 +20,7 @@ Modules:
   ds3231.c, i2c.c   - RTC on the software I2C
   eeprom.c          - settings, their limits and defaults
   service_timing.c  - 10/20/50/100ms tasks of the main loop, TIM2 gives the 10ms tick
-See README.md (usage) and CLAUDE.md (design notes).
+See README.md.
 */
 
 int main(void) {
