@@ -153,6 +153,12 @@ void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours)
 	if (!d[3] && !e.zeroEn) {d[3] = NIXIE_OFF;}
 }
 
+// the menu shows 2 digits: the brightness setting 99 is the full brightness (100%, no PWM)
+static uint8_t full(uint8_t bright)
+{
+	return (bright >= BRIGHT_MAX) ? 100 : bright;
+}
+
 /*
 day or night mode by the current time: digits and backlight brightness
 */
@@ -166,11 +172,11 @@ void iface_apply_mode (void)
 	i.night = e.nightEn && is_time_in_interval(nowMinutes, start_minutes, end_minutes);
 	
 	if (i.night){
-		brightTarget = e.nBright;
-		rgbTarget = e.rgbNightEn ? e.rgbNightBright : 0;
+		brightTarget = full(e.nBright);
+		rgbTarget = e.rgbNightEn ? full(e.rgbNightBright) : 0;
 	}else{
-		brightTarget = e.bright;
-		rgbTarget = e.rgbDayEn ? e.rgbBright : 0;
+		brightTarget = full(e.bright);
+		rgbTarget = e.rgbDayEn ? full(e.rgbBright) : 0;
 	}
 }
 
@@ -181,8 +187,8 @@ void iface_menu_preview (void)
 {
 	uint8_t s = i.display_state;
 	
-	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? EE(s) : 100,
-	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? EE(s) : 0);
+	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? full(EE(s)) : 100,
+	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? full(EE(s)) : 0);
 }
 
 /*

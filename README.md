@@ -255,7 +255,7 @@ the clock starts at 00:00 — set the time again.
          `4` — Blinking: 0.5 s on, 0.5 s off  
          `5` — Slow blinking: 1 s on, 1 s off  
 
-    **2. Brightness** (counts down 99 → 0 and shows the brightness being set)  
+    **2. Brightness** (counts down 99 → 0 and shows the brightness being set; `99` is the full brightness, 100%)  
     **2.1** Digits, day: `5–99%`  
     **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
     **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
