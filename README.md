@@ -183,10 +183,11 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ---
 
 ## **Basic Control:**
-1. **Single press of K1** — Switches to the next minute change effect (menu item 14): its number is shown on all tubes
-   for 1 s, then the time appears with this effect.
-   **Double press of K1** — Switches to the next cathode poisoning prevention effect (menu item 15) and runs it
-   the same way. The single press reacts 0.4 s after the release (waiting for the second press).
+1. **Single press of K1** — Switches to the next minute change effect (menu item 14): its number is shown in the left tube,
+   1.5 s after the last press the time appears with this effect.
+   **Double press of K1** — Switches to the next cathode poisoning prevention effect (menu item 15), its number is shown
+   in the right tube, then it runs the same way. Press again during the 1.5 s to go on without the demo.
+   The single press reacts 0.4 s after the release (waiting for the second press).
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
    Day and night have their own on/off state and brightness (menu items 4 and 5).  
    If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.

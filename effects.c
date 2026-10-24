@@ -14,7 +14,7 @@ In the setup modes fx does nothing, after them the time is shown at once.
 */
 enum {FX_NONE, FX_FLIP, FX_AP, FX_HOLD};
 
-#define HOLD_TICKS			100		// 10ms ticks: the effect number is shown before the demo
+#define HOLD_TICKS			150		// 10ms ticks: the effect number is shown before the demo, a new click restarts it
 #define FADE_STEPS			25		// fade effect: steps down and up
 #define AP_DELAY				2			// antipoisoning: steps between the starts of the digits
 #define AP_STEP_TICKS		10		// antipoisoning: 10ms ticks in a step (the waves)
@@ -261,10 +261,15 @@ static void glitchProc(void)
 	}
 }
 
-// show the effect number on all tubes for 1s, then run it: FX_FLIP_DEMO - minute change effect, FX_AP_DEMO - antipoisoning
+/*
+show the effect number for 1.5s, then run it: FX_FLIP_DEMO - minute change effect, the number in the left tube,
+FX_AP_DEMO - antipoisoning, the number in the right tube. Clicks during the 1.5s just change the number.
+*/
 void fxDemo(uint8_t next)
 {
-	memset(shown, (next == FX_AP_DEMO) ? e.apType : e.flip, sizeof(shown));
+	memset(shown, NIXIE_OFF, sizeof(shown));
+	if (next == FX_AP_DEMO) {shown[0] = e.apType;}
+	else {shown[NIXIE_COUNT - 1] = e.flip;}
 	fxNext = next;
 	fxMode = FX_HOLD;
 	fxTick = 0;
