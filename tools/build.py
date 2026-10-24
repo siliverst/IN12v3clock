@@ -1,6 +1,7 @@
 """Command line build of IN12v3clock with Cosmic and/or SDCC, without STVD and Docker.
 
-usage: python -I tools/build.py [cosmic] [sdcc]      (both by default)
+usage: python -I tools/build.py [cosmic] [sdcc] [-DNAME ...]      (both compilers by default)
+  -DNAME  - define a macro for the sources, e.g. -DDIAG_RESET
 Output goes to build/cosmic and build/sdcc. Exit code != 0 on compile error
 or if the firmware does not fit into flash.
 """
@@ -15,6 +16,7 @@ COSMIC = os.environ.get("COSMIC_DIR", r"C:\Program Files (x86)\COSMIC\FSE_Compil
 SDCC = os.environ.get("SDCC_DIR", r"C:\Program Files\SDCC\bin")
 ROM_SIZE, RAM_SIZE = 8192, 1024
 SRCS = sorted(glob.glob(os.path.join(PRJ, "*.c")))
+DEFS = [a[2:] for a in sys.argv[1:] if a.startswith("-D")]
 
 # same options as the STVD Release configuration, but with the optimizer enabled (no "-no")
 COSMIC_CFLAGS = ["+mods0", "+fast", "-pp", "-dSTM8S003"]
@@ -61,7 +63,7 @@ def cosmic():
     d = os.path.join(OUT, "cosmic")
     os.makedirs(d, exist_ok=True)
     for s in SRCS:
-        if not run([os.path.join(COSMIC, "cxstm8.exe")] + COSMIC_CFLAGS +
+        if not run([os.path.join(COSMIC, "cxstm8.exe")] + COSMIC_CFLAGS + ["-d" + d for d in DEFS] +
                    ["-i" + INC, "-i" + os.path.join(COSMIC, "Hstm8"), "-co" + d, s], PRJ):
             return False
     objs = [os.path.basename(s)[:-2] + ".o" for s in SRCS]
@@ -88,7 +90,7 @@ def sdcc():
     rels = []
     for s in SRCS:
         rel = os.path.join(d, os.path.basename(s)[:-2] + ".rel")
-        if not run([os.path.join(SDCC, "sdcc.exe")] + SDCC_CFLAGS + ["-I" + INC, "-c", s, "-o", rel], PRJ):
+        if not run([os.path.join(SDCC, "sdcc.exe")] + SDCC_CFLAGS + ["-D" + d for d in DEFS] + ["-I" + INC, "-c", s, "-o", rel], PRJ):
             return False
         rels.append(rel)
     ihx = os.path.join(d, "main.ihx")
@@ -105,6 +107,6 @@ def sdcc():
 
 
 ok = True
-for target in sys.argv[1:] or ["cosmic", "sdcc"]:
+for target in [a for a in sys.argv[1:] if not a.startswith("-D")] or ["cosmic", "sdcc"]:
     ok &= {"cosmic": cosmic, "sdcc": sdcc}[target]()
 sys.exit(0 if ok else 1)

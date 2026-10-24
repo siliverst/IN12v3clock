@@ -48,6 +48,27 @@ int main(void) {
 	iwdg_service();
   ENABLE_INTERRUPTS(); 
 
+#ifdef DIAG_RESET
+	// diagnostics: show the reset cause for 2.5s at start: "8 _ x x", RST_SR:
+	// 0 - power on/brown-out, 1 - WWDG, 2 - IWDG, 4 - illegal opcode, 8 - SWIM, 16 - EMC
+	{
+		uint8_t d[4], n = 0;
+		
+		d[0] = sfr_ITC.RST_SR.byte;
+		sfr_ITC.RST_SR.byte = 0x1F;		// the flags are cleared by writing 1
+		d[1] = d[0] / 10;
+		d[0] = d[0] % 10;
+		d[2] = NIXIE_OFF;
+		d[3] = 8;
+		displaySetBright(100);
+		displayNixie(d, 0);
+		while (n < 250){
+			if (flag10ms) {flag10ms = 0; n++;}
+			iwdg_service();
+		}
+	}
+#endif
+
 	
 	while (1) {
 		service_timing_proc();

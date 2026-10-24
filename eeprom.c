@@ -50,7 +50,7 @@ void EEPROM_set(uint8_t addr, uint8_t data)
 uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
 
   uint16_t   addr = EEPROM_ADDR_START + logAddr;  // physical address 
-  uint8_t    countTimeout;                        // timeout counter
+  uint16_t   countTimeout;                        // timeout counter
   
   // address range check
   if (logAddr >= EEPROM_SIZE)
@@ -73,8 +73,8 @@ uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
   // write byte in 16-bit address range
   *((uint8_t*) addr) = data;
 
-  // wait until done or timeout (normal flash write measured with 0 --> 100 is more than sufficient)
-  countTimeout = 100;                                // ~0.95us/inc -> ~0.1ms
+  // wait until done or timeout: the byte write takes up to 6ms (with erase), the loop is ~0.5us
+  countTimeout = 20000;
   while ((!sfr_FLASH.IAPSR.EOP) && (countTimeout--));
     
   // lock EEPROM again against accidental erase/write
