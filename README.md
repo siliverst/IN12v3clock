@@ -207,6 +207,8 @@ Q7 -> 2003A U14 I5, O5-> N1 9
      - Holding K1 (> 0.8 seconds): Continuously increases the minute value.
    - **K2:** Saves the time (seconds reset to zero) and exits the setup mode.
 
+In the 12-hour format the hours are set as 12, 1…11 (AM, the colon is on), then 12, 1…11 (PM, the colon blinks fast).
+
 If the RTC battery was empty or removed while the clock was off (DS3231 oscillator stop flag),
 the clock starts at 00:00 — set the time again.
 
@@ -234,6 +236,8 @@ the clock starts at 00:00 — set the time again.
 3. **Control:**
    - **K1:** Adjusts the parameter value.
    - **K2:** Saves the parameter and moves to the next menu item.
+   
+   In the time display the brightness changes smoothly (day/night, K2): digits 1% and backlight 2% every 50 ms.
 4. ## Menu Items:  
 
     Items 0–9: the item number is in the left digit, the value in the three right digits.  
@@ -242,7 +246,7 @@ the clock starts at 00:00 — set the time again.
 
     **0.** **Leading zero of the hours:** `0` — blank (` 7:05`), `1` — shown (`07:05`)  
 
-    **1.** **Time format:** `0` — 24-hour, `1` — 12-hour (no AM/PM indication; the time setup and the night interval are always in 24-hour format)  
+    **1.** **Time format:** `0` — 24-hour, `1` — 12-hour (no AM/PM indication on the time display; in the time setup PM is shown by the fast blinking colon; the night interval is always in 24-hour format)  
 
     **2.** **Day digits brightness:** `5%–100%`  
 

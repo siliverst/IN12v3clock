@@ -15,12 +15,15 @@ static void iface_disp2decDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 static void iface_disp3decDigit (uint16_t value, uint8_t *d0, uint8_t *d1, uint8_t *d2);
 static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
-static void iface_time_digits(uint8_t *d);
+static void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours);
 static void apProc (void);
 static uint8_t apInWork (void);
 
 static uint16_t nowMinutes;		// current time, minutes from midnight
 static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtoggle()
+
+// smooth change of the brightness (day/night, K2): the shown values go to the targets by iface_fade()
+static uint8_t brightNow, brightTarget, rgbNow, rgbTarget;
 
 // antipoisoning: every digit rolls down from the shown digit to the time digit through all 10 cathodes
 #define AP_DELAY	2										// 100ms ticks between the starts of the digits
@@ -33,6 +36,7 @@ void iface_init( void )
 	i.display_state = SETUP_NO;
 	ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
 	iface_apply_mode();
+	iface_show(brightTarget, IFACE_RGB_KEEP);		// digits at once, the backlight fades in
 }
 
 void iface_flag05sReset(void)
@@ -60,12 +64,47 @@ void iface_100ms_proc (void)
 	iface_display();
 }
 
-// every 50ms: get time from ds3231 and start the dot pulse at a new second
+static uint8_t fade(uint8_t now, uint8_t target, uint8_t step)
+{
+	if (now + step < target) {return now + step;}
+	if (now > target + step) {return now - step;}
+	return target;
+}
+
+// every 50ms: digits 1%, backlight 2% (perceptually linear), full scale in 5s / 2.5s
+static void iface_fade(void)
+{
+	uint8_t b = fade(brightNow, brightTarget, 1);
+	
+	if (b != brightNow){
+		brightNow = b;
+		displaySetBright(b);
+	}
+	b = fade(rgbNow, rgbTarget, 2);
+	if ((b != rgbNow) && !rgbBlink){
+		rgbNow = b;
+		RGBset(b);
+	}
+}
+
+// set the brightness at once (setup modes), rgb = IFACE_RGB_KEEP - do not change the backlight
+void iface_show(uint8_t digits, uint8_t rgb)
+{
+	brightNow = digits;
+	displaySetBright(digits);
+	if (rgb != IFACE_RGB_KEEP){
+		rgbNow = rgb;
+		RGBset(rgb);
+	}
+}
+
+// every 50ms: get time from ds3231 and start the dot pulse at a new second, smooth brightness change
 void iface_50ms_proc (void)
 {
 	static uint8_t secondsLast;
 	
 	if (i.display_state == SETUP_NO){
+		iface_fade();
 		ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
 		if (i.seconds != secondsLast){
 			secondsLast = i.seconds;
@@ -83,7 +122,7 @@ void apStart (void)
 {
 	uint8_t d, t[NIXIE_COUNT];
 	
-	iface_time_digits(t);
+	iface_time_digits(t, i.minutes, i.hours);
 	for (d = 0; d < NIXIE_COUNT; d++){
 		if (t[d] > 9) {t[d] = 0;}
 		apDig[d] = (i.display[d] < 10) ? i.display[d] : t[d];
@@ -114,12 +153,12 @@ static void apProc (void)
 	displayNixie(apDig, mask);
 }
 
-// time digits by the time format and the leading zero setting
-static void iface_time_digits(uint8_t *d)
+// time digits (BCD time) by the time format and the leading zero setting
+static void iface_time_digits(uint8_t *d, uint8_t minutes, uint8_t hours)
 {
-	uint8_t h = bcd_to_decimal(i.hours);
+	uint8_t h = bcd_to_decimal(hours);
 	
-	iface_disp2bcdDigit(i.minutes, &d[0], &d[1]);
+	iface_disp2bcdDigit(minutes, &d[0], &d[1]);
 	if (e.f1224){
 		h %= 12;
 		if (!h) {h = 12;}
@@ -135,22 +174,17 @@ void iface_apply_mode (void)
 {
 	uint16_t start_minutes;
 	uint16_t end_minutes;
-	uint8_t rgb;
-	
 	nowMinutes		= time_to_minutes(bcd_to_decimal(i.hours), bcd_to_decimal(i.minutes));
 	start_minutes	= time_to_minutes(e.nightStartH, e.nightStartM);
 	end_minutes		= time_to_minutes(e.nightEndH, e.nightEndM);
 	i.night = e.nightEn && is_time_in_interval(nowMinutes, start_minutes, end_minutes);
 	
 	if (i.night){
-		displaySetBright(e.nBright);
-		rgb = e.rgbNightEn ? e.rgbNightBright : 0;
+		brightTarget = e.nBright;
+		rgbTarget = e.rgbNightEn ? e.rgbNightBright : 0;
 	}else{
-		displaySetBright(e.bright);
-		rgb = e.rgbDayEn ? e.rgbBright : 0;
-	}
-	if (!rgbBlink){
-		RGBset(rgb);
+		brightTarget = e.bright;
+		rgbTarget = e.rgbDayEn ? e.rgbBright : 0;
 	}
 }
 
@@ -161,8 +195,8 @@ void iface_menu_preview (void)
 {
 	uint8_t s = i.display_state;
 	
-	displaySetBright((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? i.setupValue : 100);
-	RGBset((s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? i.setupValue : 0);
+	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? i.setupValue : 100,
+	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? i.setupValue : 0);
 }
 
 /*
@@ -209,15 +243,14 @@ static void iface_display(void)
 			}
 			
 			if (!apInWork()){
-				iface_time_digits(i.display);
+				iface_time_digits(i.display, i.minutes, i.hours);
 				displayNixie(i.display, 0);
 			}
 			break;
 		
 		case SETUP_HOURS:
 		case SETUP_MINUTES:
-			iface_disp2bcdDigit(i.minutesSetupValue, &i.display[0], &i.display[1]);
-			iface_disp2bcdDigit(i.hoursSetupValue, &i.display[2], &i.display[3]);
+			iface_time_digits(i.display, i.minutesSetupValue, i.hoursSetupValue);
 			if(i.flag05s){
 				if (s == SETUP_HOURS){
 					i.display[2] = NIXIE_OFF;
@@ -228,7 +261,8 @@ static void iface_display(void)
 				}
 			}
 			displayNixie(&i.display[0],0);
-			displayDot(100);
+			// 12h format: PM is shown by the fast blinking colon
+			displayDot((e.f1224 && (i.hoursSetupValue >= 0x12) && i.flag100ms) ? 0 : 100);
 			break;
 		
 		case SETUP_R:

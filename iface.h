@@ -63,6 +63,8 @@ void apStart (void);
 void RGBtoggle ( void );
 void iface_apply_mode (void);
 void iface_menu_preview (void);
+#define IFACE_RGB_KEEP	255
+void iface_show(uint8_t digits, uint8_t rgb);
 void iface_exit_setup (void);
 
 #ifdef	__cplusplus

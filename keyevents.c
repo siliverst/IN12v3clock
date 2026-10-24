@@ -223,7 +223,7 @@ void longpress_key1(void)
 				i.timeSetupCounter = 60*10;
 				i.hoursSetupValue = i.hours;
 				i.minutesSetupValue = i.minutes;
-				displaySetBright(100);
+				iface_show(100, IFACE_RGB_KEEP);
 				bitmaskclr(ki.bf,S1_M);
 			}
 		}else if (i.display_state > SETUP_MENU_LAST || eeMax[i.display_state] > 9){
@@ -250,8 +250,7 @@ void longpress_key2(void)
 			if (ki.lp_counter[S2] >= 2*10){
 				i.display_state = SETUP_R;
 				i.timeSetupCounter = 60*10;
-				displaySetBright(100);
-				RGBset(100);
+				iface_show(100, 100);
 				bitmaskclr(ki.bf,S2_M);
 			}
 		}
