@@ -71,7 +71,7 @@ static uint8_t fade(uint8_t now, uint8_t target, uint8_t step)
 	return target;
 }
 
-// every 50ms: digits 1%, backlight 2% (perceptually linear), full scale in 5s / 2.5s
+// every 50ms: digits 1%, backlight 4% (perceptually linear), full scale in 5s / 1.25s
 static void iface_fade(void)
 {
 	uint8_t b = fade(brightNow, brightTarget, 1);
@@ -80,7 +80,7 @@ static void iface_fade(void)
 		brightNow = b;
 		displaySetBright(b);
 	}
-	b = fade(rgbNow, rgbTarget, 2);
+	b = fade(rgbNow, rgbTarget, 4);
 	if ((b != rgbNow) && !rgbBlink){
 		rgbNow = b;
 		RGBset(b);

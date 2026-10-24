@@ -237,7 +237,7 @@ the clock starts at 00:00 — set the time again.
    - **K1:** Adjusts the parameter value.
    - **K2:** Saves the parameter and moves to the next menu item.
    
-   In the time display the brightness changes smoothly (day/night, K2): digits 1% and backlight 2% every 50 ms.
+   In the time display the brightness changes smoothly (day/night, K2): digits 1% and backlight 4% every 50 ms.
 4. ## Menu Items:  
 
     Items 0–9: the item number is in the left digit, the value in the three right digits.  
