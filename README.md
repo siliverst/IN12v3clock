@@ -183,7 +183,8 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ---
 
 ## **Basic Control:**
-1. **Single press of K1** — Executes the cathode poisoning prevention algorithm.
+1. **Single press of K1** — Executes the cathode poisoning prevention algorithm: every digit rolls down from the shown digit
+   to the current time through all 10 cathodes, the digits start one after another.
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
    Day and night have their own on/off state and brightness (menu items 4 and 5).  
    If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
@@ -239,15 +240,15 @@ the clock starts at 00:00 — set the time again.
     Items 10–13: the item number is in the two left digits, the value in the two right digits.  
     Brightness items count down (100 → 0) and show the brightness being set.
 
-    **0.** **Leading zero display:** `0` — Disabled, `1` — Enabled (not implemented yet)  
+    **0.** **Leading zero of the hours:** `0` — blank (` 7:05`), `1` — shown (`07:05`)  
 
-    **1.** **Time format:** `0` — 24-hour (12-hour is not implemented yet)  
+    **1.** **Time format:** `0` — 24-hour, `1` — 12-hour (no AM/PM indication; the time setup and the night interval are always in 24-hour format)  
 
     **2.** **Day digits brightness:** `5%–100%`  
 
     **3.** **Night digits brightness:** `0%, 5%–100%` (`0` — digits and colon are off at night)  
 
-    **4.** **Day backlight brightness:** `0%–100%`  
+    **4.** **Day backlight brightness:** `0%–100%`, perceptually linear (CIE lightness)  
 
     **5.** **Night backlight brightness:** `0%–100%`  
 

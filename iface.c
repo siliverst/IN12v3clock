@@ -9,28 +9,29 @@
 #include <string.h>
 
 Iface i;
-antipoisoning ap;
 
 static void iface_display(void);
 static void iface_disp2decDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 static void iface_disp3decDigit (uint16_t value, uint8_t *d0, uint8_t *d1, uint8_t *d2);
 static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
-static uint8_t apLoop(uint8_t dig);
+static void iface_time_digits(uint8_t *d);
 static void apProc (void);
-static void apUpdateTime (void);
 static uint8_t apInWork (void);
 
 static uint16_t nowMinutes;		// current time, minutes from midnight
 static uint8_t rgbBlink;			// 100ms ticks of the backlight blinking, see RGBtoggle()
 
+// antipoisoning: every digit rolls down from the shown digit to the time digit through all 10 cathodes
+#define AP_DELAY	2										// 100ms ticks between the starts of the digits
+static uint8_t apDig[NIXIE_COUNT];		// digits shown by antipoisoning
+static uint8_t apSteps[NIXIE_COUNT];	// steps left, 10..19 at start
+static uint8_t apTick;								// 100ms ticks from the start
+
 void iface_init( void )
 {
 	i.display_state = SETUP_NO;
 	ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
-	memset(ap.flagEn,0,sizeof(ap.flagEn));
-	apUpdateTime();	// two calls toupdate the digsNew array;
-	apUpdateTime();
 	iface_apply_mode();
 }
 
@@ -74,88 +75,57 @@ void iface_50ms_proc (void)
 }
 
 
-//0,9,8,7,6,5,4,3,2,1,0,9,8,7,6,5,4,3,2,1,0
-// border cases:
-// 5->0;543210    432198760
-// 3->0;3210      219876540
-// 2->0;210       198765430
-// if new lower than old -> counting to 9, and skip new, but last (9th) should be new.
-static uint8_t apLoop(uint8_t dig) 
-{
-	if ((ap.digsNew[dig] >= ap.digsOld[dig])||(ap.digsNew[dig] == 0 && ap.digsOld[dig] == 9)){
-		if (--ap.digsCurrent[dig] > 9) {
-			ap.digsCurrent[dig] = 9;
-		}
-		if (ap.digsCurrent[dig] == ap.digsNew[dig]){
-			return 1;
-		}else{
-			return 0;
-		}
-	}
-	else{
-		if (ap.digsCurrent[dig] == ap.digsOld[dig]) {ap.digsCounter[dig] = 8;}
-		if (ap.digsCounter[dig]--){
-			--ap.digsCurrent[dig];
-			if (ap.digsCurrent[dig] == ap.digsNew[dig]) {--ap.digsCurrent[dig];};
-			if (ap.digsCurrent[dig] > 9) {ap.digsCurrent[dig] = 9;}
-			return 0;
-		}else{
-			ap.digsCurrent[dig] = ap.digsNew[dig];
-			return 1;
-		}
-	}
-}
-
+/*
+start from the digits on the tubes (a blank tube starts from its target digit),
+a blank leading zero rolls to 0 and is blanked after the end
+*/
 void apStart (void)
 {
-	memset(ap.flagEn,1,sizeof(ap.flagEn));
-	ap.procCounter = AP_CYCLES;
-	apUpdateTime();
+	uint8_t d, t[NIXIE_COUNT];
+	
+	iface_time_digits(t);
+	for (d = 0; d < NIXIE_COUNT; d++){
+		if (t[d] > 9) {t[d] = 0;}
+		apDig[d] = (i.display[d] < 10) ? i.display[d] : t[d];
+		apSteps[d] = 10 + (uint8_t)(apDig[d] + 10 - t[d]) % 10;
+	}
+	apTick = 0;
 }
 
 static uint8_t apInWork (void)
 {
-	if (ap.flagEn[0]||ap.flagEn[1]||ap.flagEn[2]||ap.flagEn[3]){
-		return 1;
-	}else{
-		return 0;
-	}
+	return apSteps[0] | apSteps[1] | apSteps[2] | apSteps[3];
 }
 
-//once in 100ms
+// every 100ms, the rolling digits are at full brightness
 static void apProc (void)
 {
-	uint8_t d;
-	uint8_t brighMaxBitMask = 0;
-	uint8_t limit;
-
-	if (apInWork()){
-		
-		limit = ap.procCounter/AP_CYCLES;
-		
-		for (d=0;d<limit;d++){
-			if (ap.flagEn[d] == 1){
-				if (apLoop(d)){
-					ap.flagEn[d] = 2;	//one more cycle
-				}
-				i.display[d] = ap.digsCurrent[d];
-				displayNixie(&i.display[0],bitset(brighMaxBitMask,d));
-			}else if (ap.flagEn[d] == 2){
-				ap.flagEn[d] = 0;
-			}
-		}
-		if (ap.procCounter < NIXIE_COUNT*AP_CYCLES){
-			++ap.procCounter;
+	uint8_t d, mask = 0;
+	
+	if (!apInWork()) {return;}
+	for (d = 0; d < NIXIE_COUNT; d++){
+		if (apSteps[d] && (apTick >= d * AP_DELAY)){
+			apSteps[d]--;
+			apDig[d] = (apDig[d] ? apDig[d] : 10) - 1;
+			if (apSteps[d]) {mask |= (uint8_t)(1 << d);}
 		}
 	}
+	apTick++;
+	displayNixie(apDig, mask);
 }
 
-static void apUpdateTime (void)
+// time digits by the time format and the leading zero setting
+static void iface_time_digits(uint8_t *d)
 {
-	memcpy(ap.digsOld, ap.digsNew, sizeof(ap.digsOld));
-	memcpy(ap.digsCurrent, ap.digsOld, sizeof(ap.digsCurrent));
-	iface_disp2bcdDigit(i.minutes,	&ap.digsNew[0],&ap.digsNew[1]);
-	iface_disp2bcdDigit(i.hours,		&ap.digsNew[2],&ap.digsNew[3]);
+	uint8_t h = bcd_to_decimal(i.hours);
+	
+	iface_disp2bcdDigit(i.minutes, &d[0], &d[1]);
+	if (e.f1224){
+		h %= 12;
+		if (!h) {h = 12;}
+	}
+	iface_disp2decDigit(h, &d[2], &d[3]);
+	if (!d[3] && !e.zeroEn) {d[3] = NIXIE_OFF;}
 }
 
 /*
@@ -239,9 +209,8 @@ static void iface_display(void)
 			}
 			
 			if (!apInWork()){
-				iface_disp2bcdDigit(i.minutes, &i.display[0], &i.display[1]);
-				iface_disp2bcdDigit(i.hours, &i.display[2], &i.display[3]);
-				displayNixie(&i.display[0],0);
+				iface_time_digits(i.display);
+				displayNixie(i.display, 0);
 			}
 			break;
 		

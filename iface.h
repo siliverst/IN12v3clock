@@ -7,7 +7,6 @@ extern "C" {
 
 #include "display.h"
 #include "eeprom.h"
-#define AP_CYCLES	2
 
 // settings menu items are the EEPROM addresses
 enum setup_states{
@@ -51,16 +50,6 @@ typedef struct
 	uint8_t		night;							// 1 - night interval is active now
 }Iface;
 
-typedef struct
-{
-	uint8_t digsOld[NIXIE_COUNT];
-	uint8_t digsNew[NIXIE_COUNT];
-	uint8_t digsCurrent[NIXIE_COUNT];
-	uint8_t digsCounter[NIXIE_COUNT];
-	uint8_t flagEn[NIXIE_COUNT];
-	uint8_t	en;
-	uint8_t procCounter;
-}antipoisoning;
 
 
 void iface_init( void );
