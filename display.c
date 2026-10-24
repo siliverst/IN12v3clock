@@ -36,7 +36,8 @@ void displayInit ( void )
   sfr_TIM2.PSCR.PSC = 4;								// set TIM2 prescaler fTim = fcpu/2^pre with pre in [0..15]
   sfr_TIM2.ARRH.byte = hibyte(10000);		// set reload period = (ARR+1)/fTim
   sfr_TIM2.ARRL.byte = lobyte(10000);
-	sfr_TIM2.CCMR1.OC1PE 	= 1;						// buffer compare register to avoid glitches when changing duty cycle
+	sfr_TIM2.CCMR1.OC1PE 	= 1;						// buffer compare registers to avoid glitches when changing duty cycle:
+	sfr_TIM2.CCMR2.OC2PE 	= 1;						// main writes them just after update, a new value below the counter is missed
 	sfr_TIM2.IER.UIE 			= 1;						// TIM2 update interrupt enable
 	sfr_TIM2.CR1.CEN     	= 1;						// start TIM2
 	
@@ -116,6 +117,20 @@ void displayDot (uint8_t bright)
 	}
 }
 
+/*
+An EEPROM write stalls the CPU (and the ISRs) for up to 6ms, the 595 chain keeps its state meanwhile,
+so the stall lengthens the current PWM phase. Wait for the start of the longer phase:
+the "off" phase at low brightness, the "on" phase at high brightness (else digits flash or dim).
+*/
+void displayWaitLongPhase(void)
+{
+	uint8_t t = (bright0 < 50) ? sfr_TIM2.CCR1H.byte : 0;	// phase start, 256us units
+	
+	if (sfr_TIM2.CR1.CEN){																// timer is not running yet at start
+		while ((uint8_t)(sfr_TIM2.CNTRH.byte - t - 1) > 1);	// 256..767us after the phase start (ISR is done)
+	}
+}
+
 void displayDotPulse (void) 
 {
 	dotPulseCounter = 0;
@@ -142,11 +157,11 @@ void displayDotPulseProc (void)
 
 ISR_HANDLER (TIM2_UPD_ISR, _TIM2_OVR_UIF_VECTOR_)
 {
-	hc595ChainShiftOut(frames[front], FRAME_SIZE);
 	if (sfr_TIM2.IER.CC2IE)
 	{
 		DOT_PIN = 1;
 	}
+	hc595ChainShiftOut(frames[front], FRAME_SIZE);
 	flag10ms = 1;
 	sfr_TIM2.SR1.UIF = 0;
   return;

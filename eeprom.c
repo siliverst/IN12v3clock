@@ -1,5 +1,6 @@
 #include "STM8S003F3.h"
 #include "eeprom.h"
+#include "display.h"
 
 Edata e;
 
@@ -60,8 +61,8 @@ uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
   if (*((uint8_t*) addr) == data)
     return(1);
   
-  // begin critical cection (disable interrupts)
-  DISABLE_INTERRUPTS();
+  // interrupts are not touched: the unlock does not need it, and at start they must stay disabled
+  displayWaitLongPhase();
   
   // unlock w/e access to EEPROM
   sfr_FLASH.DUKR.byte = 0xAE;
@@ -80,9 +81,6 @@ uint8_t EEPROM_writeByte(uint16_t logAddr, uint8_t data) {
   // lock EEPROM again against accidental erase/write
   sfr_FLASH.IAPSR.DUL = 0;
   
-  // critical section (enable interrupts)
-  ENABLE_INTERRUPTS();
-
   // write successful -> return 1
   return(countTimeout != 0);
 
