@@ -22,6 +22,7 @@ void longpress_key2(void);
 void longpress_key1_2(void);
 void fastReleaseKey2(void);
 void fastReleaseKey1(void);
+static void fxSelect(uint8_t kind, uint8_t addr, uint8_t max);
 
 
 Keyivents ki;
@@ -92,8 +93,7 @@ void keyevents_counters ( void )
 	}
 	// no 2nd click (the key is up): single click
 	if (ki.click1 && !bitchk(ki.bf,S1) && !--ki.click1){
-		EEPROM_set(FLIP_ADDR, (e.flip < FLIP_MAX) ? e.flip + 1 : 0);
-		fxDemo(FX_FLIP_DEMO);
+		fxSelect(FX_FLIP_DEMO, FLIP_ADDR, FLIP_MAX);
 	}
 	if (i.timeSetupCounter){
 		i.timeSetupCounter--;
@@ -107,6 +107,17 @@ void keyevents_counters ( void )
 	longpress_key1_2();
 }
 
+/*
+K1 in the time display: the first click shows the number of the current effect, the clicks during it select the next one
+*/
+static void fxSelect(uint8_t kind, uint8_t addr, uint8_t max)
+{
+	if (fxHolding(kind)){
+		EEPROM_set(addr, (EE(addr) < max) ? EE(addr) + 1 : 0);
+	}
+	fxDemo(kind);
+}
+
 void event_single_key1(void)
 {
 	uint8_t s = i.display_state;
@@ -114,14 +125,17 @@ void event_single_key1(void)
 	
 	switch(s){
 		case SETUP_NO:
-			// single click: the next minute change effect, double click: the next antipoisoning effect
+			// single click: minute change effect, double click: antipoisoning effect
+#if K1_DOUBLE_CLICK
 			if (ki.click1){
 				ki.click1 = 0;
-				EEPROM_set(AP_TYPE_ADDR, (e.apType < AP_TYPE_MAX) ? e.apType + 1 : 0);
-				fxDemo(FX_AP_DEMO);
+				fxSelect(FX_AP_DEMO, AP_TYPE_ADDR, AP_TYPE_MAX);
 			}else{
 				ki.click1 = CLICK2_TICKS;
 			}
+#else
+			fxSelect(FX_FLIP_DEMO, FLIP_ADDR, FLIP_MAX);
+#endif
 			break;
 		
 		case SETUP_HOURS:

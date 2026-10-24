@@ -23,6 +23,7 @@ static uint8_t	fullMask;													// digits at full brightness
 static uint8_t	dimMask;													// digits with dimLevel brightness
 static uint16_t	dimLevel;													// on time of the dim digits, us
 static uint8_t	bright0;													// current digits brightness, %
+static uint8_t	pwmDiv = 1;												// TIM2 periods in 10ms
 static uint8_t	dotPulseCounter;
 static uint8_t	dotOdd;														// odd second, for the 2s pulse
 volatile uint8_t flag10ms;
@@ -39,7 +40,7 @@ void displayInit ( void )
 	
 	// configure TIM2 with 100Hz frequency, count to 10000;
   sfr_TIM2.CR1.ARPE = 1;								// use buffered period register to avoid glitches
-  sfr_TIM2.PSCR.PSC = 4;								// set TIM2 prescaler fTim = fcpu/2^pre with pre in [0..15]
+  sfr_TIM2.PSCR.PSC = 4;								// set TIM2 prescaler fTim = fcpu/2^pre with pre in [0..15], see displaySetPwm()
   sfr_TIM2.ARRH.byte = hibyte(10000);		// set reload period = (ARR+1)/fTim
   sfr_TIM2.ARRL.byte = lobyte(10000);
 	sfr_TIM2.CCMR1.OC1PE 	= 1;						// buffer compare registers to avoid glitches when changing duty cycle:
@@ -113,6 +114,16 @@ static void displayRender(void)
 	front ^= 1;
 }
 
+/*
+digits PWM: 0 - 100Hz, 1 - 200Hz, 2 - 400Hz. Only the timer clock is changed (1, 2, 4MHz), the period is
+10000 ticks always, so all the compare values stay the same. The prescaler is buffered: applied at the update.
+*/
+void displaySetPwm(uint8_t f)
+{
+	sfr_TIM2.PSCR.PSC = 4 - f;
+	pwmDiv = (uint8_t)(1 << f);
+}
+
 // bright -> 0-100%
 void displaySetBright(uint8_t bright)
 {
@@ -183,10 +194,10 @@ the "off" phase at low brightness, the "on" phase at high brightness (else digit
 */
 void displayWaitLongPhase(void)
 {
-	uint8_t t = (bright0 < 50) ? sfr_TIM2.CCR1H.byte : 0;	// phase start, 256us units
+	uint8_t t = (bright0 < 50) ? sfr_TIM2.CCR1H.byte : 0;	// phase start, 256 ticks units
 	
 	if (sfr_TIM2.CR1.CEN){																// timer is not running yet at start
-		while ((uint8_t)(sfr_TIM2.CNTRH.byte - t - 1) > 1);	// 256..767us after the phase start (ISR is done)
+		while ((uint8_t)(sfr_TIM2.CNTRH.byte - t - 1) > 1);	// 256..767 ticks after the phase start (ISR is done)
 	}
 }
 
@@ -231,9 +242,14 @@ void displayDotPulseProc (void)
 
 ISR_HANDLER (TIM2_UPD_ISR, _TIM2_OVR_UIF_VECTOR_)
 {
+	static uint8_t pwmCount;
+	
 	DOT_PIN = 0;
 	hc595ChainShiftOut(frames[front], FRAME_SIZE);
-	flag10ms = 1;
+	if (++pwmCount >= pwmDiv){
+		pwmCount = 0;
+		flag10ms = 1;
+	}
 	sfr_TIM2.SR1.UIF = 0;
   return;
 } // TIM2_UPD_ISR

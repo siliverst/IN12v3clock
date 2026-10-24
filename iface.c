@@ -18,7 +18,7 @@ static void iface_disp2bcdDigit (uint8_t value, uint8_t *d0, uint8_t *d1);
 
 
 // settings menu: the item number "group item" of every step (BCD)
-static const uint8_t menuNum[SETUP_MENU_LAST + 1] = {0x11, 0x12, 0x13, 0x21, 0x22, 0x23, 0x24, 0x31, 0x32, 0x32, 0x33, 0x33,
+static const uint8_t menuNum[SETUP_MENU_LAST + 1] = {0x11, 0x12, 0x13, 0x21, 0x22, 0x23, 0x24, 0x25, 0x31, 0x32, 0x32, 0x33, 0x33,
                                                      0x41, 0x42, 0x43, 0x44, 0x45};
 static uint8_t dotOdd;					// colon preview in the menu
 
@@ -54,6 +54,7 @@ void iface_100ms_proc (void)
 		i.counter1s = 0;
 	}
 	i.flag05s = (i.counter1s > 4);
+	displaySetPwm(e.pwm);							// e.pwm is changed in the menu for the preview
 	if (i.menuIntro) {i.menuIntro--;}
 	
 	//counter for blinking digits while RGB setup
@@ -181,14 +182,17 @@ void iface_apply_mode (void)
 }
 
 /*
-settings menu: show the brightness which is being set, the backlight is off for other items
+settings menu: show the brightness which is being set, the backlight is off for other items.
+PWM frequency: the value at the night brightness (the flicker is seen at a low brightness), else full.
 */
 void iface_menu_preview (void)
 {
 	uint8_t s = i.display_state;
+	uint8_t b = 100;
 	
-	iface_show((s == SETUP_BRIGHT || s == SETUP_NIGHT_BR) ? full(EE(s)) : 100,
-	           (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? full(EE(s)) : 0);
+	if ((s == SETUP_BRIGHT) || (s == SETUP_NIGHT_BR)) {b = full(EE(s));}
+	if (s == SETUP_PWM) {b = e.nBright ? full(e.nBright) : BRIGHT_MIN;}
+	iface_show(b, (s == SETUP_RGB_BR || s == SETUP_RGB_NIGHT_BR) ? full(EE(s)) : 0);
 }
 
 /*

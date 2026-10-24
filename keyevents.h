@@ -7,6 +7,9 @@ extern "C" {
 
 #define KEYS_COUNT				2
 #define CLICK2_TICKS			4				// 100ms: max pause before the 2nd click of a double click
+#ifndef K1_DOUBLE_CLICK
+#define K1_DOUBLE_CLICK		1				// 1: K1 double click selects the antipoisoning effect, 0: off (single click at once)
+#endif
 // биты текущего состояния кнопок (bf)
 #define S1               	0
 #define S2               	1

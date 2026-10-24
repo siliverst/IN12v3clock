@@ -15,6 +15,7 @@ enum eeprom_adreses{
 	NIGHT_BR_ADDR,						// 2.2 digits brightness, night, 0, 5..99%
 	RGB_BR_ADDR,							// 2.3 backlight brightness, day, 0..99%
 	RGB_NIGHT_BR_ADDR,				// 2.4 backlight brightness, night, 0..99%
+	PWM_ADDR,									// 2.5 digits PWM: 0 - 100Hz, 1 - 200Hz, 2 - 400Hz
 	NIGHT_EN_ADDR,						// 3.1 night interval enable
 	NIGHT_START_H_ADDR,				// 3.2 night start, hours and minutes (one menu item)
 	NIGHT_START_M_ADDR,
@@ -34,8 +35,9 @@ enum eeprom_adreses{
 };
 
 #define EE_MAGIC_ADDR			EE_COUNT
-#define EE_MAGIC					0x5C		// change it when the layout is changed
+#define EE_MAGIC					0x5D		// change it when the layout is changed
 #define FLIP_MAX					5
+#define PWM_MAX						2
 #define AP_TYPE_MAX				2
 #define AP_INTERVAL_MAX		30			// minutes
 #define BRIGHT_MIN				5				// %, minimal digits brightness (except 0 at night)
@@ -49,6 +51,7 @@ typedef struct {
 	uint8_t		nBright;
 	uint8_t		rgbBright;
 	uint8_t		rgbNightBright;
+	uint8_t		pwm;
 	uint8_t		nightEn;
 	uint8_t		nightStartH;
 	uint8_t		nightStartM;

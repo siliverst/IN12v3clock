@@ -14,6 +14,7 @@ extern "C" {
 void fx_10ms(void);
 void fxApStart(void);
 void fxDemo(uint8_t next);
+uint8_t fxHolding(uint8_t kind);
 
 #ifdef	__cplusplus
 }

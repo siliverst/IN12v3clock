@@ -277,6 +277,12 @@ void fxDemo(uint8_t next)
 	displayDim(0, 0);
 }
 
+// the number of the effect kind (FX_FLIP_DEMO, FX_AP_DEMO) is shown now
+uint8_t fxHolding(uint8_t kind)
+{
+	return (fxMode == FX_HOLD) && (fxNext == kind);
+}
+
 void fx_10ms(void)
 {
 	uint8_t out[NIXIE_COUNT];

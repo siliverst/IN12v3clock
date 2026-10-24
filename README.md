@@ -183,11 +183,11 @@ Q7 -> 2003A U14 I5, O5-> N1 9
 ---
 
 ## **Basic Control:**
-1. **Single press of K1** — Switches to the next minute change effect (menu item 4.1): its number is shown in the left tube,
-   1.5 s after the last press the time appears with this effect.
-   **Double press of K1** — Switches to the next cathode poisoning prevention effect (menu item 4.2), its number is shown
-   in the right tube, then it runs the same way. Press again during the 1.5 s to go on without the demo.
-   The single press reacts 0.4 s after the release (waiting for the second press).
+1. **Single press of K1** — Shows the number of the current minute change effect (menu item 4.1) in the left tube.
+   Press again while the number is shown to switch to the next effect. 1.5 s after the last press the time appears with this effect.
+   **Double press of K1** — The same for the cathode poisoning prevention effect (menu item 4.2), the number is in the right tube.
+   The single press reacts 0.4 s after the release (waiting for the second press). The double press can be switched off
+   in the firmware: `K1_DOUBLE_CLICK 0` in `keyevents.h` (then the single press reacts at once).
 2. **Single press of K2** — Switches the RGB backlight on/off for the current interval (day or night).  
    Day and night have their own on/off state and brightness (menu items 2.3 and 2.4).  
    If the backlight brightness of the current interval is 0, the backlight blinks 3 times and stays off.
@@ -260,6 +260,7 @@ the clock starts at 00:00 — set the time again.
     **2.2** Digits, night: `0, 5–99%` (`0` — digits and colon are off at night)  
     **2.3** Backlight, day: `0–99%`, perceptually linear (CIE lightness)  
     **2.4** Backlight, night: `0–99%`  
+    **2.5** Digits PWM frequency: `0` — 100 Hz, `1` — 200 Hz (default), `2` — 400 Hz; shown at the night brightness to see the flicker  
 
     **3. Night**  
     **3.1** Night interval: `0` — Off (day settings all the time), `1` — On  
