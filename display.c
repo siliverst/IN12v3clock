@@ -14,7 +14,7 @@ t1, t2 are the two on times of the normal and dim digits, CC3 is used only for t
 Two banks of frames: main fills the back bank and switches "front" (one byte write, atomic),
 so the ISR never shifts out a half updated frame.
 */
-#define FRAME_SIZE		5
+#define FRAME_SIZE		HC595_CHAIN
 #define PERIOD				10000
 static uint8_t	frames[2][3*FRAME_SIZE];					// [bank][on frame, frame after t1, frame after t2]
 static volatile uint8_t front;										// bank used by ISR
@@ -50,7 +50,7 @@ void displayInit ( void )
 	sfr_TIM2.CR1.CEN     	= 1;						// start TIM2
 	
 	hc595Init();
-	hc595ChainShiftOut(frames[0], FRAME_SIZE);	// all off
+	hc595ChainShiftOut(frames[0]);	// all off
 	memset(digits, NIXIE_OFF, sizeof(digits));
 	displaySetBright(100);
 	
@@ -245,7 +245,7 @@ ISR_HANDLER (TIM2_UPD_ISR, _TIM2_OVR_UIF_VECTOR_)
 	static uint8_t pwmCount;
 	
 	DOT_PIN = 0;
-	hc595ChainShiftOut(frames[front], FRAME_SIZE);
+	hc595ChainShiftOut(frames[front]);
 	if (++pwmCount >= pwmDiv){
 		pwmCount = 0;
 		flag10ms = 1;
@@ -260,13 +260,13 @@ ISR_HANDLER (TIM2_CAP_ISR, _TIM2_CAPCOM_CC1IF_VECTOR_)
 	//for digits (the flag is set also when the interrupt is disabled)
 	if(sfr_TIM2.SR1.CC1IF){
 		if (sfr_TIM2.IER.CC1IE){
-			hc595ChainShiftOut(frames[front] + FRAME_SIZE, FRAME_SIZE);
+			hc595ChainShiftOut(frames[front] + FRAME_SIZE);
 		}
 		sfr_TIM2.SR1.CC1IF = 0;
 	}
 	if(sfr_TIM2.SR1.CC3IF){
 		if (sfr_TIM2.IER.CC3IE){
-			hc595ChainShiftOut(frames[front] + 2*FRAME_SIZE, FRAME_SIZE);
+			hc595ChainShiftOut(frames[front] + 2*FRAME_SIZE);
 		}
 		sfr_TIM2.SR1.CC3IF = 0;
 	}

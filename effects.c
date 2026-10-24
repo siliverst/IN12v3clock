@@ -15,7 +15,8 @@ In the setup modes fx does nothing, after them the time is shown at once.
 enum {FX_NONE, FX_FLIP, FX_AP, FX_HOLD};
 
 #define HOLD_TICKS			150		// 10ms ticks: the effect number is shown before the demo, a new click restarts it
-#define FADE_STEPS			25		// fade effect: steps down and up
+#define FADE_STEPS			25		// fade effect: steps down and up (the square below needs 25)
+#define FADE_MIN_US			30		// fade effect: the shortest pulse, us: the neon does not glow steadily with shorter ones
 #define AP_DELAY				2			// antipoisoning: steps between the starts of the digits
 #define AP_STEP_TICKS		10		// antipoisoning: 10ms ticks in a step (the waves)
 #define AP_NOISE_STEPS	50		// antipoisoning noise: 10ms steps, all cathodes 5 times
@@ -188,6 +189,20 @@ static uint8_t elasticStep(void)
 	return (fxK == NIXIE_COUNT) && (fxStep >= 10);
 }
 
+/*
+fade: the on time of the changing digits, timer ticks, k = 0..25: 0 - off, 1..25 - from FADE_MIN_US to the
+digits brightness by the square (smooth for the eye). Ticks: 1, 2, 4 in 1us at 100, 200, 400Hz.
+*/
+static uint16_t fadeLevel(uint8_t k)
+{
+	uint16_t full = (uint16_t)displayGetBright() * 100;
+	uint16_t min = FADE_MIN_US << e.pwm;
+	
+	if (!k) {return 0;}
+	if (full <= min) {return full;}
+	return min + (full - min) / 25 * k / 25 * k;	// (full - min) * k^2 / 625 in 16 bits
+}
+
 static void flipProc(void)
 {
 	uint8_t d, a, b, k, end = 0;
@@ -199,7 +214,7 @@ static void flipProc(void)
 			k = (fxStep < FADE_STEPS) ? FADE_STEPS - 1 - fxStep : fxStep - FADE_STEPS + 1;
 			if (fxStep == FADE_STEPS - 1) {memcpy(shown, target, sizeof(shown));}
 			end = (fxStep == 2*FADE_STEPS - 1);
-			displayDim(end ? 0 : fxMask, (uint16_t)(k * k) * displayGetBright() / 25 * 4);
+			displayDim(end ? 0 : fxMask, fadeLevel(k));
 			break;
 
 		case 2:																				// roll down by numbers

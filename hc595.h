@@ -6,8 +6,8 @@ extern "C" {
 #endif
 
 void hc595Init (void);
-//void hc595ChainShiftOut (uint16_t *data, uint8_t lenght);
-void hc595ChainShiftOut (uint8_t *data, uint8_t lenght);
+#define HC595_CHAIN		5						// bytes in the chain (5 x 74HC595)
+void hc595ChainShiftOut (uint8_t *data);
 #ifdef	__cplusplus
 }
 #endif
