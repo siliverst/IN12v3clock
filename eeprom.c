@@ -5,7 +5,7 @@
 Edata e;
 
 // limits and defaults, in the order of enum eeprom_adreses
-const uint8_t eeMax[EE_COUNT] = {1, 1, 100, 100, 100, 100, 1, 23, 59, 23, 59, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 2, 1, 1, 255, 255, 255};
+const uint8_t eeMax[EE_COUNT] = {1, 1, 100, 100, 100, 100, 1, 23, 59, 23, 59, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 3, 1, 1, 255, 255, 255};
 static const uint8_t eeDef[EE_COUNT] = {0, 0, 100, 30, 100, 30, 0, 22, 0, 7, 0, 10, 2, 0, 1, 0, 12, 5, 81};
 
 /*

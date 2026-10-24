@@ -19,6 +19,7 @@ static uint8_t	digits[NIXIE_COUNT];							// last shown digits, NIXIE_OFF - blan
 static uint8_t	fullMask;													// digits at full brightness
 static uint8_t	bright0;													// current digits brightness, %
 static uint8_t	dotPulseCounter;
+static uint8_t	dotOdd;														// odd second, for the 2s pulse
 volatile uint8_t flag10ms;
 
 static void displayRender(void);
@@ -131,21 +132,28 @@ void displayWaitLongPhase(void)
 	}
 }
 
-void displayDotPulse (void) 
+// at a new second
+void displayDotPulse (uint8_t odd)
 {
 	dotPulseCounter = 0;
+	dotOdd = odd;
 }
 
-// every 10ms, works 0.5s after displayDotPulse() only, so it does not touch the dot in setup modes
+// every 10ms in the time display, works 1s after displayDotPulse() only
 void displayDotPulseProc (void)
 {
-	if (dotPulseCounter < 50) {
+	uint8_t c = dotPulseCounter;
+	
+	if (c < 100) {
 		switch (e.colonBlinkingType) {
-			case 0:
-				displayDot((dotPulseCounter < 25 ? dotPulseCounter : 49 - dotPulseCounter) * 4);
+			case 0:																		// 0.5s pulse every second
+				if (c < 50) {displayDot((c < 25 ? c : 49 - c) * 4);}
 				break;
 			case 1:
 				displayDot(100);
+				break;
+			case 3:																		// 2s pulse: lights up in an even second, goes out in an odd one
+				displayDot(dotOdd ? 99 - c : c + 1);
 				break;
 			default:
 				displayDot(0);

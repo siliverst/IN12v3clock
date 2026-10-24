@@ -274,6 +274,7 @@ the clock starts at 00:00 — set the time again.
          `0` — Pulse every second  
          `1` — Always on (at the digits brightness)  
          `2` — Always off  
+         `3` — Slow pulse: lights up smoothly during one second, goes out during the next one  
     
 5. **Exiting the menu:** After the last menu item, the clock returns to normal time display mode.  
    Without key presses the menu (and the time and color setup) is left after 60 seconds, not saved values are dropped.

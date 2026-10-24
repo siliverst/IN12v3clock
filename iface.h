@@ -50,6 +50,8 @@ typedef struct
 	uint8_t		night;							// 1 - night interval is active now
 }Iface;
 
+extern Iface i;
+
 
 
 void iface_init( void );

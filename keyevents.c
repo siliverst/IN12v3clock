@@ -24,7 +24,6 @@ void fastReleaseKey1(void);
 
 
 Keyivents ki;
-extern Iface i;
 
 void keyevents_proc ( void )
 {

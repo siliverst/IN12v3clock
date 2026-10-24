@@ -108,7 +108,7 @@ void iface_50ms_proc (void)
 		ds3231_read_time(&i.seconds,&i.minutes,&i.hours);
 		if (i.seconds != secondsLast){
 			secondsLast = i.seconds;
-			displayDotPulse();
+			displayDotPulse(i.seconds & 1);			// BCD, bit 0 is the parity
 		}
 	}
 }
