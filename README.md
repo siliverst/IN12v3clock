@@ -4,6 +4,12 @@
 Alternate firmware for the GeekStyles IN12 V3 Nixie nixieclock PCB.
 
 ## Version
+> **Branch `dave`:** the same firmware 2.00 with other defaults (GitHub issue #2): leading zero on, 12-hour format,
+> colon pulse every second, digits and backlight at full brightness, night mode off, backlight on day and night,
+> color R 255, G 100, B 50, cathode poisoning prevention every 10 minutes. The defaults are applied when the EEPROM
+> is empty or has a different layout (for example after the original firmware), or when flashed with the default
+> EEPROM file. All settings can be changed in the menu as usual.
+
 - **2.00**: Rework of the firmware:
   - day and night modes with smooth brightness change, separate digits and backlight brightness, the night digits can be off;
   - perceptually linear backlight brightness (CIE lightness), backlight on/off by K2 for day and night separately;

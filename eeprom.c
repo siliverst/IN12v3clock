@@ -7,7 +7,9 @@ Edata e;
 // limits and defaults, in the order of enum eeprom_adreses
 const uint8_t eeMax[EE_COUNT] = {1, 1, 5, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, BRIGHT_MAX, PWM_MAX, 1, 23, 59, 23, 59,
                                  FLIP_MAX, AP_TYPE_MAX, AP_INTERVAL_MAX, AP_INTERVAL_MAX, 1, 1, 1, 255, 255, 255};
-static const uint8_t eeDef[EE_COUNT] = {0, 0, 0, BRIGHT_MAX, 30, BRIGHT_MAX, 30, 0, 0, 22, 0, 7, 0, 0, 0, 10, 2, 0, 1, 0, 12, 5, 81};
+// branch "dave": the defaults of Dave (GitHub issue #2): leading zero, 12h, colon pulse, full brightness, night off,
+// backlight on day and night, color 255/100/50, antipoisoning every 10 minutes
+static const uint8_t eeDef[EE_COUNT] = {1, 1, 0, BRIGHT_MAX, 30, BRIGHT_MAX, 30, 0, 0, 22, 0, 7, 0, 0, 0, 10, 2, 0, 1, 1, 255, 100, 50};
 
 /*
 read all settings from EEPROM to e, wrong values are replaced by defaults.
