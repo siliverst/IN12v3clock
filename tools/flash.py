@@ -1,6 +1,8 @@
 """Flash IN12v3clock through ST-LINK (SWIM) with STVP_CmdLine. Option bytes are not touched.
 
-usage: python -I tools/flash.py [sdcc] [data]
+usage: python -I tools/flash.py [release] [sdcc] [data]
+  release - flash the precompiled firmware from the repository (Release/in12v3clock.s19,
+            with sdcc: SDCC/main.s19), no compiler is needed
   sdcc  - flash build/sdcc/main.s19 instead of build/cosmic/in12v3clock.s19
   data  - also write the default EEPROM (in12v3clock_Programmer/in12v3clock_STVP_data.s19),
           without it the firmware keeps the settings or resets them itself if the layout changed
@@ -12,8 +14,15 @@ PRJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STVP = os.environ.get("STVP_CMDLINE") or \
        r"C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe"
 
-prog = os.path.join(PRJ, "build", "sdcc", "main.s19") if "sdcc" in sys.argv else \
-       os.path.join(PRJ, "build", "cosmic", "in12v3clock.s19")
+if "release" in sys.argv:
+    prog = os.path.join(PRJ, "SDCC", "main.s19") if "sdcc" in sys.argv else \
+           os.path.join(PRJ, "Release", "in12v3clock.s19")
+else:
+    prog = os.path.join(PRJ, "build", "sdcc", "main.s19") if "sdcc" in sys.argv else \
+           os.path.join(PRJ, "build", "cosmic", "in12v3clock.s19")
+if not os.path.exists(prog):
+    sys.exit("no file " + prog + " (build it first or use: release)")
+print("flashing " + os.path.relpath(prog, PRJ))
 cmd = [STVP, "-BoardName=ST-LINK", "-Port=USB", "-ProgMode=SWIM", "-Device=STM8S003F3",
        "-no_loop", "-no_log", "-no_progress", "-verbose", "-no_progOption", "-verif", "-FileProg=" + prog]
 if "data" in sys.argv:

@@ -26,6 +26,33 @@ The STM8S003F3P6 microcontroller features 8 KB of Flash memory, 1 KB of RAM, and
 
 ---
 
+## Quick Start: flash the precompiled firmware (no build)
+The repository has the ready firmware of the current version, no compiler is needed to flash it:
+`Release/in12v3clock.s19` (Cosmic, recommended), `SDCC/main.s19` and `SDCC/main.ihx` (the same firmware built with SDCC).
+
+1. **Get the firmware:** `git clone https://github.com/siliverst/IN12v3clock.git`, or on GitHub **Code > Download ZIP**
+   (the submodule is not needed for flashing), or only the file:
+   [in12v3clock.s19](https://github.com/siliverst/IN12v3clock/raw/master/Release/in12v3clock.s19).
+2. **Install** [ST Visual Programmer (STVP)](https://www.st.com/en/development-tools/stvp-stm8.html) (it installs the ST-LINK driver too).
+3. **Connect** an ST-LINK V2 to the debug connector: `SWIM` -> pin 2, `RST` -> pin 3, `GND` -> pin 4, power the clock
+   from its own supply (see [Flashing](#flashing)).
+4. **Flash** in one of the ways (in the project folder):
+   - Python 3: `python tools/flash.py release`
+   - VS Code: `Terminal > Run Task...` > `Flash` > `Precompiled firmware from the repository (Release/, no compiler needed)`
+   - PowerShell, no Python:
+     ```
+     & "C:\Program Files (x86)\STMicroelectronics\st_toolset\stvp\STVP_CmdLine.exe" -BoardName=ST-LINK -Port=USB -ProgMode=SWIM -Device=STM8S003F3 -no_loop -no_log -no_progress -verif -no_progOption -no_progData -FileProg=Release\in12v3clock.s19
+     ```
+   - STVP window: open the project `in12v3clock_Programmer/in12v3clock_STVP.stp`, tab **PROGRAM MEMORY**, `Program > Current tab`
+   - Linux / macOS: `stm8flash -c stlinkv2 -p stm8s003f3 -s flash -w Release/in12v3clock.s19`
+
+   Success: `<<< Programming PROGRAM MEMORY succeeds` and `<<< Verifying PROGRAM MEMORY succeeds`
+   (the lines about DATA MEMORY and OPTION BYTE in the STVP_CmdLine output can be ignored, they are not written).
+5. **Once for a new chip:** the option byte `AFR0` (the green backlight channel), see [Flashing](#flashing).
+   The settings: the firmware writes the defaults itself if the EEPROM is empty or has an old layout.
+
+---
+
 ## Requirements
 What to install (Windows):
 
@@ -54,7 +81,7 @@ External libraries: the submodule [STM8_headers](https://github.com/gicking/STM8
    |------|--------------|
    | `Build` | build, asks for the compiler (the same as `Ctrl+Shift+B`) |
    | `Build Cosmic`, `Build SDCC` | build with one compiler, no question |
-   | `Flash` | flash through ST-LINK, asks: Cosmic or SDCC firmware, with or without the default EEPROM (the settings reset). Option bytes are not touched |
+   | `Flash` | flash through ST-LINK, asks: Cosmic or SDCC firmware or the precompiled one (`Release/`, no build needed), with or without the default EEPROM (the settings reset). Option bytes are not touched |
    | `Build and flash Cosmic` | build and flash at once — the usual one |
    | `Special build Cosmic` | test builds: `AP_TEST` (the time runs 6 times faster, antipoisoning every minute), `DIAG_RESET` (the reset cause at start), `K1_DOUBLE_CLICK=0` |
    | `Default EEPROM file` | regenerate the default EEPROM file after a change of the settings layout |
@@ -202,11 +229,13 @@ Q7 -> 2003A U14 I5, O5-> N1 9
  - Build options: `python tools/build.py cosmic -DK1_DOUBLE_CLICK=0` (no double click of K1), `-DDIAG_RESET`
    (shows the reset cause at start), `-DAP_TEST` (test: the time runs 6 times faster, antipoisoning every minute).
  - `python tools/eedata.py` regenerates the default EEPROM file from the sources (after a change of the settings layout).
- - `python tools/flash.py [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file.
+ - `python tools/flash.py [release] [sdcc] [data]` flashes `build/cosmic/in12v3clock.s19` through ST-LINK (SWIM) with `STVP_CmdLine`, option bytes are not touched; `data` also writes the default EEPROM file; `release` flashes the precompiled `Release/in12v3clock.s19` (no compiler needed).
 2. Flash the firmware, see [Flashing](#flashing).
 3. Verify the board's functionality.
 
 ## Flashing
+Only flashing the precompiled firmware: see [Quick Start](#quick-start-flash-the-precompiled-firmware-no-build).
+
 The STM8S003F3 has no UART bootloader, it is flashed only through **SWIM** with an **ST-LINK V2** (an original or a cheap clone).
 
 **Connection** — the debug connector of the board (see [Debug Connector](#debug-connector)):
@@ -242,7 +271,7 @@ Install [STVP](https://www.st.com/en/development-tools/stvp-stm8.html) (it also 
 `Program > All tabs` writes all three at once (the settings are reset).
 
 ### Windows: command line or VS Code
-`python tools/flash.py [sdcc] [data]` or the VS Code task `Flash` (see [Working in VS Code](#working-in-vs-code)).
+`python tools/flash.py [release] [sdcc] [data]` or the VS Code task `Flash` (see [Working in VS Code](#working-in-vs-code)).
 It uses `STVP_CmdLine.exe` from STVP, writes the program memory (and the default EEPROM with `data`), verifies it,
 never touches the option bytes. Set `AFR0` once with the STVP GUI.
 

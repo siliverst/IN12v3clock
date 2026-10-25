@@ -23,6 +23,7 @@
 			"description": "What to flash (option bytes are never touched)",
 			"options": [
 				{"label": "Cosmic firmware", "value": ""},
+				{"label": "Precompiled firmware from the repository (Release/, no compiler needed)", "value": "release"},
 				{"label": "SDCC firmware", "value": "sdcc"},
 				{"label": "Cosmic firmware + default EEPROM (settings reset)", "value": "data"},
 				{"label": "SDCC firmware + default EEPROM (settings reset)", "value": "sdcc data"}
